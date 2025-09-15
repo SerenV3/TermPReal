@@ -4,16 +4,178 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:padding="16dp"
     tools:context=".SetAlarmActivity">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="알람 설정 화면입니다."
-        android:textSize="20sp"
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/saveButtonLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <!-- 1. 시간 선택 -->
+            <TimePicker
+                android:id="@+id/timePicker"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:timePickerMode="spinner"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- 2. 날짜 선택 -->
+            <TextView
+                android:id="@+id/datePickerLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="날짜 선택:"
+                android:textSize="16sp"
+                android:layout_marginTop="24dp"
+                app:layout_constraintTop_toBottomOf="@+id/timePicker"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <TextView
+                android:id="@+id/selectedDateText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="오늘"
+                android:textSize="16sp"
+                android:padding="8dp"
+                app:layout_constraintTop_toTopOf="@+id/datePickerLabel"
+                app:layout_constraintBottom_toBottomOf="@+id/datePickerLabel"
+                app:layout_constraintStart_toEndOf="@+id/datePickerLabel"
+                app:layout_constraintEnd_toStartOf="@+id/calendarButton"
+                android:layout_marginStart="8dp"/>
+
+            <ImageButton
+                android:id="@+id/calendarButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@android:drawable/ic_menu_today"
+                android:contentDescription="날짜 선택 달력"
+                app:layout_constraintTop_toTopOf="@+id/selectedDateText"
+                app:layout_constraintBottom_toBottomOf="@+id/selectedDateText"
+                app:layout_constraintEnd_toEndOf="parent"
+                android:background="?attr/selectableItemBackgroundBorderless" />
+
+            <!-- 3. 요일 반복 -->
+            <Button
+                android:id="@+id/repeatDaysButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="요일 반복 설정"
+                android:layout_marginTop="16dp"
+                app:layout_constraintTop_toBottomOf="@+id/datePickerLabel"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- 4. 공휴일 끄기 버튼 -->
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/holidayOffSwitch"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="공휴일에 알람 끄기"
+                android:textSize="16sp"
+                android:layout_marginTop="16dp"
+                app:layout_constraintTop_toBottomOf="@+id/repeatDaysButton"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- 5. 알람 이름 -->
+            <EditText
+                android:id="@+id/alarmNameEditText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:hint="알람 이름 (선택 사항)"
+                android:inputType="text"
+                android:layout_marginTop="16dp"
+                app:layout_constraintTop_toBottomOf="@+id/holidayOffSwitch"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- 6. 알람음 -->
+            <Button
+                android:id="@+id/alarmSoundButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="알람음 선택"
+                android:layout_marginTop="16dp"
+                app:layout_constraintTop_toBottomOf="@+id/alarmNameEditText"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- 7. 진동 -->
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/vibrationSwitch"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="진동"
+                android:textSize="16sp"
+                android:layout_marginTop="16dp"
+                app:layout_constraintTop_toBottomOf="@+id/alarmSoundButton"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- 8. 다시 울림 -->
+            <Button
+                android:id="@+id/snoozeButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="다시 울림 설정"
+                android:layout_marginTop="16dp"
+                app:layout_constraintTop_toBottomOf="@+id/vibrationSwitch"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <!-- 9. 알람 배경 -->
+            <Button
+                android:id="@+id/alarmBackgroundButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="알람 배경 선택"
+                android:layout_marginTop="16dp"
+                app:layout_constraintTop_toBottomOf="@+id/snoozeButton"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                android:layout_marginBottom="16dp"/>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </ScrollView>
+
+    <!-- 10. 취소/저장 버튼 -->
+    <LinearLayout
+        android:id="@+id/saveButtonLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <Button
+            android:id="@+id/cancelButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="취소"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_marginEnd="8dp"/>
+
+        <Button
+            android:id="@+id/saveButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="저장"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_marginStart="8dp"/>
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
