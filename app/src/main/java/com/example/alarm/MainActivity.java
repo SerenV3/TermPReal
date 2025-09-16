@@ -25,7 +25,7 @@ public class MainActivity extends AppCompatActivity {
     private Handler handler;       // UI 업데이트 및 주기적 실행을 위한 핸들러
     private Runnable timeUpdater;  // 현재 시간을 주기적으로 업데이트하는 작업을 정의할 Runnable 객체
     private SimpleDateFormat sdf;  // 날짜/시간을 특정 문자열 형식으로 포맷하기 위한 객체
-    private FloatingActionButton addAlarmFab; // 알람 추가 버튼(FloatingActionButton)을 가리킬 변수
+
 
     // Activity가 처음 생성될 때 호출되는 메소드입니다.
     @Override
@@ -49,7 +49,8 @@ public class MainActivity extends AppCompatActivity {
         sdf.setTimeZone(TimeZone.getTimeZone("Asia/Seoul"));
 
         // XML 레이아웃에 정의된 ID (R.id.addAlarmFab)를 사용하여 FloatingActionButton 위젯의 참조를 가져옵니다.
-        addAlarmFab = findViewById(R.id.addAlarmFab);
+        // addAlarmFab을 지역 변수로 선언하고 초기화합니다.
+        FloatingActionButton addAlarmFab = findViewById(R.id.addAlarmFab);
 
         // 알람 추가 버튼(addAlarmFab)에 클릭 리스너를 설정합니다.
         addAlarmFab.setOnClickListener(new View.OnClickListener() {
