@@ -1,23 +1,22 @@
 <resources>
-    <string name="app_name">Alarm</string>
-    <string name="set_alarm_label_date_selection">날짜 선택:</string>
-    <string name="set_alarm_text_today">오늘</string>
-    <string name="set_alarm_desc_calendar_icon">날짜 선택 달력</string>
-    <string name="set_alarm_day_sun">일</string>
-    <string name="set_alarm_day_mon">월</string>
-    <string name="set_alarm_day_tue">화</string>
-    <string name="set_alarm_day_wed">수</string>
-    <string name="set_alarm_day_thu">목</string>
-    <string name="set_alarm_day_fri">금</string>
-    <string name="set_alarm_day_sat">토</string>
-    <string name="set_alarm_setting_holiday_off">공휴일에 알람 끄기</string>
-    <string name="set_alarm_hint_alarm_name">알람 이름</string>
-    <string name="set_alarm_setting_alarm_sound">알람음</string>
-    <string name="set_alarm_setting_vibration">진동</string>
-    <string name="set_alarm_setting_snooze">다시 울림</string>
-    <string name="set_alarm_button_select_alarm_background">알람 배경 선택</string>
-    <string name="set_alarm_button_cancel">취소</string>
-    <string name="set_alarm_button_save">저장</string>
-    <string name="default_time_display">00:00:00</string>
-    <string name="add_alarm_content_description">알람 추가</string>
+    <string name="app_name">Simple Alarm Test</string> <!-- 앱 이름을 Test 프로젝트에 맞게 변경 -->
+
+    <!-- MainActivity -->
+    <string name="current_time_label">현재 시간:</string>
+    <string name="alarm_status_no_alarm_set">설정된 알람 없음</string> <!-- %s는 시간으로 대체됩니다 (예: 08:30) -->
+    <string name="set_alarm_button_text">알람 설정/변경</string>
+    <string name="cancel_alarm_button_text">알람 취소</string>
+    <string name="fab_add_alarm_description">새 알람 설정</string>
+
+    <!-- SetAlarmActivity -->
+    <string name="title_activity_set_alarm">알람 시간 설정</string>
+    <string name="save_button_text">저장</string>
+    <string name="cancel_button_text">취소</string>
+
+    <!-- AlarmReceiver & Notification -->
+    <string name="alarm_notification_title">알람!</string>
+    <string name="alarm_notification_text">설정하신 알람이 울립니다!</string>
+    <string name="alarm_notification_channel_name">알람</string>
+    <string name="alarm_notification_channel_description">설정된 알람 알림</string>
+    <string name="alarm_status_alarm_set_at">알람 설정됨: %s</string>
 </resources>
