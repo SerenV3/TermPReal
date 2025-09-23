@@ -65,7 +65,7 @@ public class SetAlarmActivity extends AppCompatActivity {
             }
         }
 
-        Calendar alarmCalendar = Calendar.getInstance();
+        Calendar alarmCalendar = Calendar.getInstance(); //java.util.calendar
         alarmCalendar.set(Calendar.HOUR_OF_DAY, hour);
         alarmCalendar.set(Calendar.MINUTE, minute);
         alarmCalendar.set(Calendar.SECOND, 0);
@@ -76,12 +76,12 @@ public class SetAlarmActivity extends AppCompatActivity {
         }
 
         Intent intent = new Intent(this, AlarmReceiver.class);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+        PendingIntent pendingIntent = PendingIntent.getBroadcast( // AlarmManager가 특정 시간이 되었을 때 브로드캐스트(방송)할 수 있는 PendingIntent를 생성
                 this,
-                MainActivity.ALARM_REQUEST_CODE,
+                MainActivity.ALARM_REQUEST_CODE, //1001
                 intent,
-                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
-        );
+                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT //보안상의 이유로 Android 12 (API 레벨 31) 이상을 타겟팅하는 앱에서는 PendingIntent를 생성할 때 FLAG_IMMUTABLE 또는 FLAG_MUTABLE 중 하나를 반드시 명시.FLAG_IMMUTABLE을 사용하는 것이 보안상 권장
+        );                                                                      //이 플래그는 시스템에 이미 동일한 PendingIntent(동일한 context, requestCode, 그리고 intent.filterEquals()로 비교했을 때 동일한 내부 Intent)가 존재할 경우의 동작을 결정
 
         if (alarmManager != null) {
             AlarmManager.AlarmClockInfo alarmClockInfo = new AlarmManager.AlarmClockInfo(alarmCalendar.getTimeInMillis(), getMainActivityPendingIntent());
@@ -101,7 +101,7 @@ public class SetAlarmActivity extends AppCompatActivity {
 
     private PendingIntent getMainActivityPendingIntent() {
         Intent intent = new Intent(this, MainActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK); //사용자가 알람 UI를 통해 앱으로 돌아올 때, 앱이 이전에 어떤 상태였든 상관없이 깔끔하게 MainActivity부터 시작하도록 하는 효과가 있습니다. 예를 들어, 사용자가 MainActivity -> SomeOtherActivity -> 홈 화면으로 나간 상태에서 알람 UI를 통해 앱을 다시 실행하면, SomeOtherActivity는 제거되고 MainActivity가 표시
         return PendingIntent.getActivity(
                 this,
                 0,
