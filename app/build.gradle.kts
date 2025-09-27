@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.alarm"
+    namespace = "com.example.testalarmreal02"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.alarm"
+        applicationId = "com.example.testalarmreal02"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

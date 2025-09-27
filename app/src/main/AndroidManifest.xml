@@ -2,13 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- 주석: 안드로이드 13 (API 33) 이상에서 알림을 표시하기 위한 권한입니다. -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-
-    <!-- 주석: 정확한 시간에 알람을 설정하기 위한 권한입니다. -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-
-
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -17,33 +10,16 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.TestAlarm">
-        <!-- 주석: android:label="@string/app_name" (strings.xml에서 "Simple Alarm Test"로 설정됨) -->
-        <!-- 주석: android:theme="@style/Theme.TestAlarm" (현재 프로젝트의 테마 이름) -->
-
+        android:theme="@style/Theme.TestAlarmReal02">
         <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".SetAlarmActivity"
-            android:label="@string/title_activity_set_alarm"
-            android:parentActivityName=".MainActivity">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value=".MainActivity" />
-        </activity>
-
-        <receiver
-            android:name=".AlarmReceiver"
-            android:enabled="true"
-            android:exported="false" />
-
     </application>
 
 </manifest>
