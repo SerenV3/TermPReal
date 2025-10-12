@@ -1,112 +1,313 @@
-package com.example.alarm; // 이 파일이 속한 패키지를 정의합니다.
+package com.example.alarm;
 
-// 필요한 안드로이드 및 자바 표준 라이브러리들을 가져옵니다.
-import android.content.Intent; // 다른 Activity를 시작하기 위한 Intent 클래스입니다.
-import android.os.Bundle; // 안드로이드 Activity의 상태 저장 및 복원에 사용됩니다.
-import android.os.Handler; // 특정 작업을 지연 실행하거나 다른 스레드에서 UI 스레드로 메시지를 보내는 데 사용됩니다.
-import android.os.Looper;  // 스레드별 메시지 루프를 관리합니다. UI 업데이트는 메인 Looper에서 해야 합니다.
-import android.view.View;    // UI 요소(예: 버튼)의 클릭 이벤트를 처리하기 위해 필요합니다.
-import android.widget.TextView; // 화면에 텍스트를 표시하는 UI 위젯입니다.
-import androidx.appcompat.app.AppCompatActivity; // 이전 안드로이드 버전과의 호환성을 유지하면서 현대적인 액티비티 기능을 제공합니다.
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.Settings;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton; // Material Design의 FloatingActionButton 위젯을 사용하기 위해 필요합니다.
+import androidx.activity.OnBackPressedCallback;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import java.text.SimpleDateFormat; // 날짜와 시간을 원하는 형식의 문자열로 변환하는 데 사용됩니다.
-import java.util.Calendar;      // 현재 날짜와 시간 정보를 가져오는 데 사용됩니다.
-import java.util.Date;          // 특정 시점의 날짜와 시간을 나타내는 객체입니다.
-import java.util.Locale;        // 지역화 관련 정보를 다룰 때 사용됩니다 (예: 날짜/시간 형식).
-import java.util.TimeZone;      // 시간대 정보를 다룰 때 사용됩니다.
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-// MainActivity 클래스는 앱의 주 화면을 나타내며, AppCompatActivity를 상속받습니다.
-public class MainActivity extends AppCompatActivity {
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import java.util.TimeZone;
 
-    // 멤버 변수 선언
-    private TextView timeTextView; // XML 레이아웃의 TextView 위젯(시간 표시용)을 가리킬 변수
-    private Handler handler;       // UI 업데이트 및 주기적 실행을 위한 핸들러
-    private Runnable timeUpdater;  // 현재 시간을 주기적으로 업데이트하는 작업을 정의할 Runnable 객체
-    private SimpleDateFormat sdf;  // 날짜/시간을 특정 문자열 형식으로 포맷하기 위한 객체
+// OnAlarmInteractionListener 인터페이스 구현
+public class MainActivity extends AppCompatActivity implements AlarmAdapter.OnAlarmInteractionListener {
 
+    private static final String TAG = "MainActivity";
 
-    // Activity가 처음 생성될 때 호출되는 메소드입니다.
+    private TextView timeTextView;
+    private Handler handler;
+    private Runnable timeUpdater;
+    private SimpleDateFormat sdf;
+
+    private AlarmViewModel alarmViewModel;
+    private AlarmAdapter alarmAdapter;
+    private RecyclerView recyclerView;
+    private FloatingActionButton addAlarmFab;
+
+    // --- 하단 메뉴 관련 UI 요소 ---
+    private LinearLayout bottomActionMenu;
+    private Button buttonTurnOff;
+    private Button buttonDelete;
+
+    public static final String ALARM_ID_EXTRA = "com.example.alarm.ALARM_ID_EXTRA";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState); // 부모 클래스(AppCompatActivity)의 onCreate 메소드 호출 (필수)
-        // XML 레이아웃 파일(R.layout.activity_main)을 현재 Activity의 화면으로 설정합니다.
+        super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        // XML 레이아웃에 정의된 ID (R.id.timeTextView)를 사용하여 TextView 위젯의 참조를 가져옵니다.
-        timeTextView = findViewById(R.id.timeTextView);
-
-        // Handler를 메인 스레드(UI 스레드)의 Looper와 연결하여 초기화합니다.
-        // UI 업데이트는 반드시 메인 스레드에서 수행해야 합니다.
-        handler = new Handler(Looper.getMainLooper());
-
-        // SimpleDateFormat 객체를 초기화합니다.
-        // "HH:mm:ss"는 24시간제 시:분:초 형식을 의미합니다.
-        // Locale.KOREA를 사용하여 한국 지역 설정에 맞는 형식을 우선적으로 고려합니다.
-        sdf = new SimpleDateFormat("HH:mm:ss", Locale.KOREA);
-        // 시간대를 "Asia/Seoul" (한국 표준시, KST)로 명시적으로 설정합니다.
-        sdf.setTimeZone(TimeZone.getTimeZone("Asia/Seoul"));
-
-        // XML 레이아웃에 정의된 ID (R.id.addAlarmFab)를 사용하여 FloatingActionButton 위젯의 참조를 가져옵니다.
-        // addAlarmFab을 지역 변수로 선언하고 초기화합니다.
-        FloatingActionButton addAlarmFab = findViewById(R.id.addAlarmFab);
-
-        // 알람 추가 버튼(addAlarmFab)에 클릭 리스너를 설정합니다.
-        addAlarmFab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) { // 버튼이 클릭되었을 때 이 메소드가 호출됩니다.
-                // SetAlarmActivity로 화면을 전환하기 위한 Intent 객체를 생성합니다.
-                // 첫 번째 인자는 현재 Context(MainActivity.this)이고,
-                // 두 번째 인자는 시작할 Activity의 클래스(SetAlarmActivity.class)입니다.
-                Intent intent = new Intent(MainActivity.this, SetAlarmActivity.class);
-                // 생성된 Intent를 사용하여 SetAlarmActivity를 시작합니다.
-                startActivity(intent);
-            }
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            return insets;
         });
 
-        // 주기적으로 시간을 업데이트할 Runnable 객체를 정의하고 초기화합니다.
+        // 기본 UI 요소 초기화
+        timeTextView = findViewById(R.id.timeTextView);
+        recyclerView = findViewById(R.id.alarmRecyclerView);
+        addAlarmFab = findViewById(R.id.addAlarmFab);
+
+        // 하단 메뉴 UI 요소 초기화
+        bottomActionMenu = findViewById(R.id.bottom_action_menu);
+        buttonTurnOff = findViewById(R.id.button_turn_off);
+        buttonDelete = findViewById(R.id.button_delete);
+
+        handler = new Handler(Looper.getMainLooper());
+        sdf = new SimpleDateFormat("HH:mm:ss", Locale.KOREA);
+        sdf.setTimeZone(TimeZone.getTimeZone("Asia/Seoul"));
+
+        // ViewModel 및 Adapter 설정
+        setupViewModelAndAdapter();
+
+        // 버튼 리스너 설정
+        setupButtonListeners();
+
+        // 뒤로가기 콜백 설정
+        setupOnBackPressedCallback();
+
+        // 시간 업데이트 시작
         timeUpdater = new Runnable() {
             @Override
-            public void run() { // 이 메소드가 실제로 주기적으로 실행될 코드입니다.
-                // 현재 시간을 나타내는 Date 객체를 가져옵니다.
-                // Calendar.getInstance()는 현재 시간대의 현재 시간을 기준으로 Calendar 객체를 반환합니다.
+            public void run() {
                 Date currentTime = Calendar.getInstance().getTime();
-                // sdf (SimpleDateFormat)를 사용하여 현재 시간을 "HH:mm:ss" 형식의 문자열로 변환합니다.
                 String formattedTime = sdf.format(currentTime);
-
-                // timeTextView가 null이 아닌지 확인하고 (안전성 확보), 포맷된 시간 문자열을 TextView에 설정합니다.
                 if (timeTextView != null) {
                     timeTextView.setText(formattedTime);
                 }
-
-                // Handler를 사용하여 이 Runnable(timeUpdater 자신)을 1000밀리초(1초) 후에 다시 실행하도록 예약합니다.
-                // 'this'는 현재 실행 중인 Runnable 객체(timeUpdater)를 가리킵니다.
                 handler.postDelayed(this, 1000);
             }
         };
     }
 
-    // Activity가 사용자에게 보여지기 시작할 때 (또는 다시 활성화될 때) 호출되는 메소드입니다.
+    private void setupViewModelAndAdapter() {
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        alarmViewModel = new ViewModelProvider(this).get(AlarmViewModel.class);
+        alarmAdapter = new AlarmAdapter(new AlarmAdapter.AlarmDiff(), this);
+        recyclerView.setAdapter(alarmAdapter);
+        alarmViewModel.getAllAlarms().observe(this, alarms -> alarmAdapter.submitList(alarms));
+    }
+
+    private void setupButtonListeners() {
+        addAlarmFab.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, SetAlarmActivity.class);
+            startActivity(intent);
+        });
+
+        buttonDelete.setOnClickListener(v -> {
+            List<Alarm> selectedAlarms = alarmAdapter.getSelectedAlarms();
+            for (Alarm alarm : selectedAlarms) {
+                cancelAlarm(alarm); // 시스템 알람 취소
+                alarmViewModel.delete(alarm); // DB에서 삭제
+            }
+            Toast.makeText(MainActivity.this, selectedAlarms.size() + "개의 알람이 삭제되었습니다.", Toast.LENGTH_SHORT).show();
+            exitSelectionMode();
+        });
+
+        buttonTurnOff.setOnClickListener(v -> {
+            List<Alarm> selectedAlarms = alarmAdapter.getSelectedAlarms();
+            for (Alarm alarm : selectedAlarms) {
+                if (alarm.isEnabled) {
+                    alarm.isEnabled = false;
+                    cancelAlarm(alarm); // 시스템 알람 취소
+                    alarmViewModel.update(alarm); // DB 업데이트
+                }
+            }
+            Toast.makeText(MainActivity.this, "선택된 알람이 꺼졌습니다.", Toast.LENGTH_SHORT).show();
+            exitSelectionMode();
+        });
+    }
+
+    private void enterSelectionMode() {
+        alarmAdapter.setSelectionMode(true);
+        bottomActionMenu.setVisibility(View.VISIBLE);
+        addAlarmFab.setVisibility(View.GONE);
+    }
+
+    private void exitSelectionMode() {
+        alarmAdapter.setSelectionMode(false);
+        bottomActionMenu.setVisibility(View.GONE);
+        addAlarmFab.setVisibility(View.VISIBLE);
+    }
+
+    private void setupOnBackPressedCallback() {
+        OnBackPressedCallback callback = new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (alarmAdapter.isSelectionMode()) {
+                    exitSelectionMode();
+                } else {
+                    // 기본 뒤로가기 동작을 수행하기 위해 콜백을 비활성화하고 다시 호출
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                }
+            }
+        };
+        getOnBackPressedDispatcher().addCallback(this, callback);
+    }
+
+
+    // --- OnAlarmInteractionListener 구현부 ---
+
     @Override
-    protected void onResume() {
-        super.onResume(); // 부모 클래스의 onResume 메소드 호출
-        // Activity가 화면에 나타날 때 시간 업데이트를 시작(또는 재개)합니다.
-        // handler와 timeUpdater가 null이 아닌지 확인하여 NullPointerException을 방지합니다.
-        if (handler != null && timeUpdater != null) {
-            // timeUpdater Runnable을 즉시 실행 대기열에 추가합니다 (실제 실행은 run() 메소드).
-            handler.post(timeUpdater);
+    public void onAlarmToggled(Alarm alarm, boolean isEnabled) {
+        if (isEnabled) {
+            checkPermissionsAndSchedule(alarm);
+        } else {
+            alarm.isEnabled = false;
+            alarmViewModel.update(alarm);
+            cancelAlarm(alarm);
+            Toast.makeText(MainActivity.this, String.format(Locale.getDefault(), "%02d:%02d 알람이 해제되었습니다.", alarm.hour, alarm.minute), Toast.LENGTH_SHORT).show();
         }
     }
 
-    // Activity가 화면에서 사라지기 직전 (다른 Activity가 전면에 오거나, 홈 버튼을 누르는 등) 호출되는 메소드입니다.
+    @Override
+    public void onItemClick(int position) {
+        if (alarmAdapter.isSelectionMode()) {
+            // 선택 모드일 때 아이템 클릭
+            alarmAdapter.toggleSelection(position);
+            if (alarmAdapter.getSelectedItemCount() == 0) {
+                exitSelectionMode();
+            }
+        } else {
+            // 일반 모드일 때 아이템 클릭 (알람 수정 등)
+            // TODO: 알람 수정 화면으로 이동하는 로직 구현
+            Toast.makeText(this, "알람 수정 화면으로 이동 (구현 필요)", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onItemLongClick(int position) {
+        if (!alarmAdapter.isSelectionMode()) {
+            enterSelectionMode();
+        }
+        onItemClick(position); // 롱클릭 시에도 선택 상태가 토글되도록
+    }
+
+
+    private void checkPermissionsAndSchedule(Alarm alarm) {
+        // 이 메소드의 내용은 기존과 동일
+        AlarmManager systemAlarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && systemAlarmManager != null && !systemAlarmManager.canScheduleExactAlarms()) {
+            new AlertDialog.Builder(MainActivity.this)
+                .setTitle("정확한 알람 권한 필요")
+                .setMessage("알람을 설정하려면 '정확한 알람 예약' 권한이 필요합니다. 앱 설정에서 권한을 허용해 주세요.")
+                .setPositiveButton("설정으로 이동", (dialog, which) -> {
+                    Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM);
+                    startActivity(intent);
+                    alarm.isEnabled = false;
+                    alarmViewModel.update(alarm);
+                })
+                .setNegativeButton("취소", (dialog, which) -> {
+                    alarm.isEnabled = false;
+                    alarmViewModel.update(alarm);
+                    Toast.makeText(MainActivity.this, "정확한 알람 권한이 없어 알람을 설정할 수 없습니다.", Toast.LENGTH_LONG).show();
+                })
+                .setOnDismissListener(dialogInterface -> {
+                    AlarmManager amCheck = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && amCheck != null && !amCheck.canScheduleExactAlarms()) {
+                        alarm.isEnabled = false;
+                        alarmViewModel.update(alarm);
+                    }
+                })
+                .setCancelable(false)
+                .show();
+        } else {
+            alarm.isEnabled = true;
+            alarmViewModel.update(alarm);
+            scheduleAlarm(alarm);
+            Toast.makeText(MainActivity.this, String.format(Locale.getDefault(), "%02d:%02d 알람이 설정되었습니다.", alarm.hour, alarm.minute), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    // ... onResume, scheduleAlarm, cancelAlarm, onPause 메소드는 기존과 동일 ...
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (handler != null && timeUpdater != null) {
+            handler.post(timeUpdater);
+        }
+        // 선택 모드 중에 설정 화면 등으로 나갔다 돌아왔을 때,
+        // LiveData가 UI를 갱신하면서 어댑터의 선택 상태가 초기화될 수 있습니다.
+        // 이를 방지하려면 onSaveInstanceState를 사용하거나, ViewModel에서 선택 상태를 관리해야 합니다.
+        // 현재는 단순성을 위해 이 부분은 생략합니다.
+    }
+
+    private void scheduleAlarm(Alarm alarm) {
+        Log.d(TAG, "scheduleAlarm called for ID: " + alarm.id + " at " + alarm.hour + ":" + alarm.minute);
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(this, AlarmReceiver.class);
+        intent.putExtra(ALARM_ID_EXTRA, alarm.id);
+
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, alarm.id, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, alarm.hour);
+        calendar.set(Calendar.MINUTE, alarm.minute);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+
+        if (calendar.getTimeInMillis() <= System.currentTimeMillis()) {
+            calendar.add(Calendar.DAY_OF_MONTH, 1);
+        }
+
+        if (alarmManager != null) {
+            try {
+                alarmManager.setAlarmClock(new AlarmManager.AlarmClockInfo(calendar.getTimeInMillis(), pendingIntent), pendingIntent);
+                Log.d(TAG, "Alarm scheduled successfully for ID: " + alarm.id);
+            } catch (SecurityException e) {
+                Log.e(TAG, "SecurityException in scheduleAlarm for ID: " + alarm.id + ". This should have been caught earlier.", e);
+                Toast.makeText(this, "알람 설정 실패: 권한 문제. (오류 코드: S1)", Toast.LENGTH_LONG).show();
+                alarm.isEnabled = false;
+                alarmViewModel.update(alarm);
+            }
+        } else {
+            Log.e(TAG, "AlarmManager is null in scheduleAlarm for ID: " + alarm.id);
+        }
+    }
+
+    private void cancelAlarm(Alarm alarm) {
+        Log.d(TAG, "cancelAlarm called for ID: " + alarm.id);
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(this, AlarmReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, alarm.id, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        if (alarmManager != null) {
+            alarmManager.cancel(pendingIntent);
+            Log.d(TAG, "Alarm cancelled successfully for ID: " + alarm.id);
+        } else {
+            Log.e(TAG, "AlarmManager is null in cancelAlarm for ID: " + alarm.id);
+        }
+    }
+
     @Override
     protected void onPause() {
-        super.onPause(); // 부모 클래스의 onPause 메소드 호출
-        // Activity가 보이지 않을 때는 불필요한 업데이트를 중지하여 배터리를 절약하고 시스템 리소스를 아낍니다.
-        // handler와 timeUpdater가 null이 아닌지 확인합니다.
+        super.onPause();
         if (handler != null && timeUpdater != null) {
-            // Handler의 메시지 큐에서 timeUpdater Runnable에 대한 모든 예약된 콜백(postDelayed로 예약된 것)을 제거합니다.
             handler.removeCallbacks(timeUpdater);
         }
     }
