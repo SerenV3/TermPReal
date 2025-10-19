@@ -2,4 +2,7 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- 다중 선택 모드에서 아이템이 선택되었을 때의 배경색 -->
+    <color name="selected_item_background">#E0E0E0</color>
 </resources>

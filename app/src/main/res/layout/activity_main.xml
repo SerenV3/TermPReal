@@ -7,19 +7,21 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <!-- 현재 시간을 표시할 TextView -->
-    <TextView
+    <!-- [수정] TextView를 TextClock으로 변경하여 성능 최적화 -->
+    <TextClock
         android:id="@+id/timeTextView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="@string/default_time_display"
-        android:textSize="60sp"
-        android:textAlignment="center"
         android:layout_marginTop="48dp"
-        app:layout_constraintWidth_percent="0.8"
-        app:layout_constraintTop_toTopOf="parent"
+        android:textSize="48sp"
+        android:textAlignment="center"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_percent="0.8"
+        android:format12Hour="a hh:mm:ss" 
+        android:format24Hour="HH:mm:ss"
+        tools:text="오후 03:15:30" />
 
     <!-- 알람 목록을 표시할 RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
