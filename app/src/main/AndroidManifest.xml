@@ -2,7 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- [추가] 진동을 사용하기 위한 권한 -->
+    <!-- [추가] 잠금 화면 위로 Activity를 표시하고 기기를 깨우기 위한 권한 -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
+    <!-- 진동을 사용하기 위한 권한 -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- 알람 예약 및 정확한 알람 실행을 위한 권한 (API 31+) -->
@@ -10,9 +13,6 @@
 
     <!-- Android 13 (API 33) 이상에서 알림을 표시하기 위한 권한 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-
-    <!-- 기기 부팅 완료 시 알람 재등록을 위한 권한 (선택 사항) -->
-    <!-- <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" /> -->
 
     <application
         android:allowBackup="true"
@@ -26,7 +26,6 @@
         <activity
             android:name=".SetAlarmActivity"
             android:exported="false">
-            <!-- MainActivity에서만 호출되므로 exported="false" -->
         </activity>
         <activity
             android:name=".MainActivity"

@@ -21,16 +21,13 @@ import java.util.List;
 public interface AlarmDao {
 
     /**
-     * 새로운 알람을 데이터베이스에 삽입(Insert)합니다.
+     * [수정] 새로운 알람을 데이터베이스에 삽입(Insert)하고, 생성된 row ID를 반환합니다.
      *
      * @param alarm 삽입할 Alarm 객체
-     * @OnConflict는 데이터 삽입 시 충돌이 발생했을 때 어떻게 처리할지를 정의합니다.
-     * OnConflictStrategy.REPLACE는 만약 동일한 ID(Primary Key)를 가진 데이터가 이미 존재하면,
-     * 기존 데이터를 새로운 데이터로 덮어쓰는 전략입니다.
-     * (현재 id가 autoGenerate이므로 이 옵션은 update와 유사하게 동작할 수 있습니다.)
+     * @return 새로 삽입된 행의 ID (long 타입). 이 ID는 알람의 고유 ID(Primary Key)와 같습니다.
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    void insert(Alarm alarm);
+    long insert(Alarm alarm);
 
     /**
      * 기존 알람 정보를 데이터베이스에서 업데이트(Update)합니다.

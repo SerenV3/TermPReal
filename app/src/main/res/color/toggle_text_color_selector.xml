@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ToggleButton의 상태에 따라 텍스트 색상을 변경하는 선택자(Selector)입니다.
+  - android:state_checked="true": 버튼이 선택(체크)되었을 때 적용될 색상입니다. (흰색)
+  - 기본 item: 어떤 상태에도 해당하지 않을 때 (체크되지 않았을 때) 적용될 기본 색상입니다. (검은색)
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true" android:color="@android:color/white" />
+    <item android:color="@android:color/black" />
+</selector>

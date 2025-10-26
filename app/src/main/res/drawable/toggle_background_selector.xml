@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ToggleButton의 상태에 따라 배경 모양을 변경하는 선택자(Selector)입니다.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 1. state_checked="true": 버튼이 선택(체크)되었을 때 적용될 모양 -->
+    <item android:state_checked="true">
+        <shape android:shape="oval">
+            <!-- 채우기 색상: 파란색 계열 -->
+            <solid android:color="@android:color/holo_blue_dark" />
+            <!-- 크기: 가로/세로 48dp -->
+            <size android:width="48dp" android:height="48dp" />
+        </shape>
+    </item>
+
+    <!-- 2. 기본 item: 체크되지 않았을 때 적용될 기본 모양 -->
+    <item>
+        <shape android:shape="oval">
+            <!-- 채우기 없음 -->
+            <solid android:color="@android:color/transparent" />
+            <!-- 테두리선: 1dp 두께의 회색 -->
+            <stroke android:width="1dp" android:color="@android:color/darker_gray" />
+            <size android:width="48dp" android:height="48dp" />
+        </shape>
+    </item>
+
+</selector>

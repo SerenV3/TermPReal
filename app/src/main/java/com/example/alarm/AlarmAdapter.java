@@ -2,7 +2,6 @@ package com.example.alarm;
 
 import android.content.Context;
 import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 /**
  * RecyclerView에 알람 목록을 표시하기 위한 어댑터.
@@ -29,10 +29,6 @@ import java.util.List;
  */
 public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolder> {
 
-    /**
-     * 어댑터와 상호작용(아이템 클릭, 롱클릭, 스위치 토글) 이벤트를
-     * Activity(또는 Fragment)에 전달하기 위한 리스너 인터페이스.
-     */
     public interface OnAlarmInteractionListener {
         void onAlarmToggled(Alarm alarm, boolean isEnabled);
         void onItemClick(int position);
@@ -40,17 +36,9 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
     }
 
     private final OnAlarmInteractionListener interactionListener;
-
-    // --- 다중 선택 상태 관리를 위한 변수 ---
     private boolean isSelectionMode = false;
     private final SparseBooleanArray selectedItems = new SparseBooleanArray();
 
-
-    /**
-     * 어댑터 생성자.
-     * @param diffCallback 데이터 아이템의 변경사항을 계산하는 DiffUtil.ItemCallback 구현체.
-     * @param listener Activity에서 구현한 리스너 객체.
-     */
     public AlarmAdapter(@NonNull DiffUtil.ItemCallback<Alarm> diffCallback, OnAlarmInteractionListener listener) {
         super(diffCallback);
         this.interactionListener = listener;
@@ -58,37 +46,33 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
 
     /**
      * 각 아이템 뷰의 UI 요소들을 보관하는 ViewHolder 클래스.
-     * `RecyclerView`는 화면에 보이지 않는 아이템의 뷰(ViewHolder)를 재활용하여
-     * 메모리 사용량을 줄이고 스크롤 성능을 향상시킵니다.
      */
     public class AlarmViewHolder extends RecyclerView.ViewHolder {
-        // [수정] XML 변경에 따라 TextView들을 분리
+        // [기존 뷰 유지] 시간(오전/오후, 시:분)과 스위치
         final TextView amPmTextView;
         final TextView timeTextView;
+        // [추가] 반복 요일을 표시할 TextView를 멤버 변수로 추가합니다.
+        final TextView repeatDaysTextView;
         final SwitchCompat alarmSwitch;
         final Context context;
 
         public AlarmViewHolder(@NonNull View itemView) {
             super(itemView);
             context = itemView.getContext();
-            // [수정] 변경된 ID로 뷰를 찾습니다.
-            amPmTextView = itemView.findViewById(R.id.am_pm_text_view);
-            timeTextView = itemView.findViewById(R.id.time_text_view);
-            alarmSwitch = itemView.findViewById(R.id.alarm_switch);
 
-            // --- 리스너 설정: ViewHolder 생성자에서 한 번만 설정하여 성능 최적화 ---
+            // XML 레이아웃의 뷰들을 ID를 통해 코드와 연결합니다.
+            amPmTextView = itemView.findViewById(R.id.amPmTextView);
+            timeTextView = itemView.findViewById(R.id.timeTextView);
+            // [추가] XML 레이아웃에 추가한 TextView(repeatDaysTextView)를 ViewHolder에 연결합니다.
+            repeatDaysTextView = itemView.findViewById(R.id.repeatDaysTextView);
+            alarmSwitch = itemView.findViewById(R.id.alarmSwitch);
+
             setupClickListeners();
         }
 
-        /**
-         * 클릭/롱클릭 리스너를 설정합니다.
-         * 이 메소드는 ViewHolder가 생성될 때 한 번만 호출되므로,
-         * bind() 메소드에서 매번 리스너를 새로 생성하는 것보다 효율적입니다.
-         */
         private void setupClickListeners() {
             itemView.setOnClickListener(v -> {
                 int position = getAdapterPosition();
-                // getAdapterPosition()은 아이템이 삭제되는 중간 과정 등에서 NO_POSITION을 반환할 수 있으므로, 항상 유효성 검사를 해야 합니다.
                 if (position != RecyclerView.NO_POSITION && interactionListener != null) {
                     interactionListener.onItemClick(position);
                 }
@@ -98,13 +82,11 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
                 int position = getAdapterPosition();
                 if (position != RecyclerView.NO_POSITION && interactionListener != null) {
                     interactionListener.onItemLongClick(position);
-                    return true; // true를 반환하여 롱클릭 이벤트를 여기서 소비(consume)하고,
-                                 // 일반 클릭 이벤트가 연달아 호출되는 것을 막습니다.
+                    return true;
                 }
                 return false;
             });
 
-            // 스위치 클릭 리스너도 여기서 설정
             alarmSwitch.setOnClickListener(v -> {
                 int position = getAdapterPosition();
                 if (position != RecyclerView.NO_POSITION && interactionListener != null) {
@@ -114,31 +96,22 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
         }
 
         /**
-         * ViewHolder에 실제 데이터를 바인딩(연결)하는 메소드.
-         * 스크롤 등으로 새로운 아이템이 화면에 표시되어야 할 때마다 호출됩니다.
-         * @param alarm 표시할 Alarm 객체
+         * [수정] ViewHolder에 데이터를 바인딩할 때, 반복 요일 정보도 업데이트하도록 호출을 추가합니다.
          */
         void bind(Alarm alarm) {
             updateTime(alarm);
             updateSwitch(alarm);
+            // [추가] 반복 요일 정보를 TextView에 표시하는 메소드를 호출합니다.
+            updateRepeatDays(alarm);
             updateSelectionState(getAdapterPosition());
         }
 
-        /**
-         * Payload를 사용하여 ViewHolder의 일부만 업데이트합니다.
-         * 이렇게 하면 뷰 전체를 다시 그리지 않고 변경된 부분만 효율적으로 업데이트할 수 있습니다.
-         *
-         * @param alarm 표시할 Alarm 객체
-         * @param payloads DiffUtil에서 전달된 변경 정보 객체
-         */
         void bind(Alarm alarm, List<Object> payloads) {
             if (payloads.isEmpty()) {
-                // payload가 없으면 전체를 다시 바인딩합니다.
                 bind(alarm);
                 return;
             }
 
-            // payload가 있으면, 변경된 부분만 선택적으로 업데이트합니다.
             for (Object payload : payloads) {
                 if (payload.equals("PAYLOAD_SWITCH_CHANGED")) {
                     updateSwitch(alarm);
@@ -149,13 +122,7 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
             }
         }
 
-        // --- bind() 메소드의 책임을 분리한 헬퍼 메소드들 ---
-
-        /**
-         * [수정] Alarm 객체의 헬퍼 메소드를 사용하여 시간 관련 TextView들을 업데이트합니다.
-         */
         private void updateTime(Alarm alarm) {
-            // Alarm.java에 추가한 헬퍼 메소드를 사용하여 오전/오후와 시간 문자열을 가져옵니다.
             amPmTextView.setText(alarm.getAmPm());
             timeTextView.setText(alarm.getFormattedTime());
         }
@@ -164,17 +131,44 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
             alarmSwitch.setChecked(alarm.isEnabled());
         }
 
+        /**
+         * [추가] 알람 객체의 반복 요일 정보를 읽어와 TextView에 표시하는 새로운 헬퍼 메소드입니다.
+         * @param alarm 표시할 Alarm 객체
+         */
+        private void updateRepeatDays(Alarm alarm) {
+            if (alarm.isRepeating()) {
+                // 1. 이 알람이 반복 알람인 경우, TextView를 화면에 보이도록 설정합니다.
+                repeatDaysTextView.setVisibility(View.VISIBLE);
+
+                // 2. 선택된 요일들을 "월, 화, 수" 형태의 문자열로 만듭니다.
+                // StringJoiner는 문자열을 특정 구분자(여기서는 ", ")로 연결할 때 편리한 클래스입니다.
+                StringJoiner joiner = new StringJoiner(", ");
+                if (alarm.isMondayEnabled()) joiner.add("월");
+                if (alarm.isTuesdayEnabled()) joiner.add("화");
+                if (alarm.isWednesdayEnabled()) joiner.add("수");
+                if (alarm.isThursdayEnabled()) joiner.add("목");
+                if (alarm.isFridayEnabled()) joiner.add("금");
+                if (alarm.isSaturdayEnabled()) joiner.add("토");
+                if (alarm.isSundayEnabled()) joiner.add("일");
+
+                // 3. 완성된 문자열을 TextView에 설정합니다.
+                repeatDaysTextView.setText(joiner.toString());
+
+            } else {
+                // 4. 이 알람이 반복 알람이 아닌 경우, TextView를 화면에서 완전히 숨깁니다.
+                repeatDaysTextView.setVisibility(View.GONE);
+            }
+        }
+
         private void updateSelectionState(int position) {
             if (isSelectionMode && selectedItems.get(position, false)) {
+                // [수정] 직접 정의된 색상 리소스를 사용하도록 수정합니다.
                 itemView.setBackgroundColor(ContextCompat.getColor(context, R.color.selected_item_background));
             } else {
                 itemView.setBackgroundColor(Color.TRANSPARENT);
             }
         }
     }
-
-
-    // --- ListAdapter의 필수 오버라이드 메소드들 ---
 
     @NonNull
     @Override
@@ -193,9 +187,6 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
     public void onBindViewHolder(@NonNull AlarmViewHolder holder, int position, @NonNull List<Object> payloads) {
         holder.bind(getItem(position), payloads);
     }
-
-
-    // --- 다중 선택 관련 public 메소드 ---
 
     public void setSelectionMode(boolean selectionMode) {
         this.isSelectionMode = selectionMode;
@@ -234,44 +225,41 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
         return alarms;
     }
 
-
     /**
      * `ListAdapter`가 데이터 변경을 효율적으로 처리하기 위해 사용하는 DiffUtil.ItemCallback 구현체.
      */
     public static class AlarmDiff extends DiffUtil.ItemCallback<Alarm> {
-        /**
-         * 두 아이템이 동일한 객체인지 확인합니다. (보통 고유 ID를 비교)
-         * RecyclerView가 아이템의 이동, 삭제, 추가를 감지하는 데 사용됩니다.
-         */
         @Override
         public boolean areItemsTheSame(@NonNull Alarm oldItem, @NonNull Alarm newItem) {
             return oldItem.getId() == newItem.getId();
         }
 
         /**
-         * 두 아이템의 내용이 동일한지 확인합니다.
-         * areItemsTheSame()이 true를 반환할 때만 호출됩니다.
-         * RecyclerView가 아이템의 내용 변경(업데이트)을 감지하는 데 사용됩니다.
-         * 이 메소드가 false를 반환하면, onBindViewHolder가 호출되어 뷰를 새로 그립니다.
+         * [수정] 두 아이템의 내용이 동일한지 확인하는 로직을 업데이트합니다.
+         * 이제 시간, 활성화 상태뿐만 아니라, **모든 요일의 반복 여부**까지 비교해야
+         * DiffUtil이 반복 설정 변경을 올바르게 감지하고 UI를 갱신할 수 있습니다.
          */
         @Override
         public boolean areContentsTheSame(@NonNull Alarm oldItem, @NonNull Alarm newItem) {
             return oldItem.getHour() == newItem.getHour() &&
                    oldItem.getMinute() == newItem.getMinute() &&
-                   oldItem.isEnabled() == newItem.isEnabled();
+                   oldItem.isEnabled() == newItem.isEnabled() &&
+                   oldItem.isMondayEnabled() == newItem.isMondayEnabled() &&
+                   oldItem.isTuesdayEnabled() == newItem.isTuesdayEnabled() &&
+                   oldItem.isWednesdayEnabled() == newItem.isWednesdayEnabled() &&
+                   oldItem.isThursdayEnabled() == newItem.isThursdayEnabled() &&
+                   oldItem.isFridayEnabled() == newItem.isFridayEnabled() &&
+                   oldItem.isSaturdayEnabled() == newItem.isSaturdayEnabled() &&
+                   oldItem.isSundayEnabled() == newItem.isSundayEnabled();
         }
 
-        /**
-         * (선택적 최적화) areContentsTheSame()이 false일 때, 어떤 내용이 변경되었는지
-         * 구체적인 정보를 담은 "payload" 객체를 반환할 수 있습니다.
-         * 여기서 null이 아닌 객체를 반환하면, RecyclerView는 전체 뷰를 다시 그리는 onBindViewHolder(holder, position) 대신,
-         * payload를 전달하는 onBindViewHolder(holder, position, payloads)를 호출합니다.
-         */
         @Override
         public Object getChangePayload(@NonNull Alarm oldItem, @NonNull Alarm newItem) {
             if (oldItem.isEnabled() != newItem.isEnabled()) {
                 return "PAYLOAD_SWITCH_CHANGED";
             }
+            // [개선] 만약 요일 반복 설정만 변경되었다면, 해당 부분만 업데이트 하도록 payload를 추가할 수도 있습니다.
+            // 여기서는 편의상 전체를 다시 그리도록 null을 반환합니다.
             return null;
         }
     }

@@ -4,6 +4,7 @@ import android.app.Application;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -28,10 +29,11 @@ public class AlarmViewModel extends AndroidViewModel {
     // 이 LiveData는 데이터베이스에 변경이 있을 때마다 UI에 자동으로 새로운 데이터를 전달합니다.
     private final LiveData<List<Alarm>> allAlarms;
 
+    // [추가] 새로 생성된 알람의 ID를 UI 컨트롤러에 전달하기 위한 LiveData.
+    // MutableLiveData는 값을 변경할 수 있는 LiveData입니다.
+    private final MutableLiveData<Long> newAlarmId = new MutableLiveData<>();
+
     // 데이터베이스 I/O(입출력) 작업을 백그라운드 스레드에서 실행하기 위한 ExecutorService.
-    // 안드로이드에서 데이터베이스 접근, 네트워크 통신 등 잠재적으로 오래 걸릴 수 있는 작업은
-    // 반드시 메인(UI) 스레드가 아닌 별도의 백그라운드 스레드에서 처리해야 합니다.
-    // 그렇지 않으면 UI가 멈추는 ANR(Application Not Responding) 오류가 발생합니다.
     private final ExecutorService databaseWriteExecutor = Executors.newSingleThreadExecutor();
 
     public AlarmViewModel(@NonNull Application application) {
@@ -41,7 +43,6 @@ public class AlarmViewModel extends AndroidViewModel {
         // 데이터베이스 인스턴스를 통해 DAO 인터페이스의 구현체를 얻습니다.
         this.alarmDao = db.alarmDao();
         // DAO를 통해 모든 알람 목록을 가져와 LiveData 멤버 변수에 할당합니다.
-        // 이 작업은 Room이 내부적으로 백그라운드에서 처리하므로 여기서 직접 Executor를 사용할 필요는 없습니다.
         this.allAlarms = alarmDao.getAllAlarms();
     }
 
@@ -56,15 +57,25 @@ public class AlarmViewModel extends AndroidViewModel {
     }
 
     /**
-     * 새로운 알람을 데이터베이스에 삽입하도록 요청합니다.
+     * [추가] 새로 생성된 알람의 ID를 관찰하기 위한 LiveData를 외부에 제공합니다.
+     * @return 새로 생성된 알람의 ID를 담는 LiveData
+     */
+    public LiveData<Long> getNewAlarmId() {
+        return newAlarmId;
+    }
+
+    /**
+     * [수정] 새로운 알람을 데이터베이스에 삽입하고, 생성된 ID를 newAlarmId LiveData에 전달합니다.
      * 실제 작업은 백그라운드 스레드에서 실행됩니다.
      *
      * @param alarm 삽입할 Alarm 객체
      */
     public void insert(Alarm alarm) {
-        // execute() 메소드에 전달된 람다식(Runnable)이 백그라운드 스레드에서 실행됩니다.
         databaseWriteExecutor.execute(() -> {
-            alarmDao.insert(alarm);
+            // alarmDao.insert(alarm)은 이제 새로 생성된 row의 ID(long 타입)를 반환합니다.
+            long id = alarmDao.insert(alarm);
+            // postValue()는 백그라운드 스레드에서 LiveData의 값을 안전하게 업데이트하는 데 사용됩니다.
+            newAlarmId.postValue(id);
         });
     }
 
@@ -93,15 +104,12 @@ public class AlarmViewModel extends AndroidViewModel {
     }
 
     /**
-     * 이 ViewModel이 더 이상 사용되지 않아 소멸될 때 호출되는 콜백 메소드입니다. (예: Activity가 완전히 종료될 때)
-     * 여기서 ViewModel이 사용하던 리소스, 특히 직접 생성한 백그라운드 스레드(ExecutorService)를
-     * 반드시 정리해주어야 메모리 누수를 방지할 수 있습니다.
+     * 이 ViewModel이 더 이상 사용되지 않아 소멸될 때 호출되는 콜백 메소드입니다.
      */
     @Override
     protected void onCleared() {
         super.onCleared();
         // ExecutorService를 정상적으로 종료시킵니다.
-        // 진행 중이던 작업은 완료하지만, 새로운 작업은 받지 않습니다.
         databaseWriteExecutor.shutdown();
     }
 }
