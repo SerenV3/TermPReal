@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- [새 파일] 알람이 울릴 때 표시될 전용 화면의 UI 레이아웃입니다. -->
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black"
+    tools:context=".AlarmRingingActivity">
+
+    <!--
+        이 화면은 잠금화면 위로 바로 나타나야 하므로,
+        사용자가 알람임을 즉시 인지하고 쉽게 상호작용할 수 있도록
+        어두운 배경에 최소한의 정보만 표시하는 것이 좋습니다.
+    -->
+
+    <!-- 1. 현재 시간을 크게 표시할 TextView -->
+    <!--
+        화면의 중앙에 위치하며, 매우 큰 텍스트 크기를 가집니다.
+        tools:text 속성은 개발 중에만 보이는 예시 텍스트입니다.
+        app:layout_constraintVertical_chainStyle="packed" 은 시간과 버튼이
+        세로 방향으로 묶여서 화면 중앙에 예쁘게 정렬되도록 돕습니다.
+    -->
+    <TextView
+        android:id="@+id/currentTimeTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:textSize="54sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@+id/dismissButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_chainStyle="packed"
+        tools:text="오전 08:30" />
+
+    <!-- 2. "알람 해제" 버튼 -->
+    <!--
+        시간 텍스트 아래에 충분한 간격(128dp)을 두고 위치합니다.
+        사용자가 잠결에도 쉽게 누를 수 있도록 좌우로 넓고, 글자 크기도 크게 만듭니다.
+    -->
+    <Button
+        android:id="@+id/dismissButton"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="128dp"
+        android:layout_marginEnd="32dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
+        android:text="알람 해제"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/currentTimeTextView" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,5 +1,6 @@
 package com.example.alarm;
 
+import androidx.annotation.Nullable;
 import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.Ignore;
@@ -32,10 +33,14 @@ public class Alarm {
     @ColumnInfo(name = "is_vibration_enabled")
     private boolean isVibrationEnabled;
 
-    // --- [추가] 요일 반복 기능 구현을 위한 필드들 ---
-    // 각 필드는 데이터베이스에 'is_monday_enabled' 와 같은 이름의 컬럼으로 저장되어,
-    // 해당 요일에 알람이 반복되어야 하는지를 나타냅니다.
+    // --- [추가] 알람음 기능 구현을 위한 필드 ---
+    // 사용자가 선택한 음악 파일의 경로(URI)를 문자열 형태로 저장합니다.
+    // 알람음을 선택하지 않을 수도 있으므로, null 값을 허용해야 합니다. (@Nullable)
+    @Nullable
+    @ColumnInfo(name = "sound_uri")
+    private String soundUri;
 
+    // --- [기존] 요일 반복 기능 구현을 위한 필드들 ---
     @ColumnInfo(name = "is_monday_enabled")
     private boolean isMondayEnabled;
 
@@ -59,10 +64,10 @@ public class Alarm {
 
     /**
      * [수정] Room 데이터베이스가 모든 정보를 포함하여 객체를 생성할 때 사용하는 기본 생성자입니다.
-     * 요일 반복을 위한 boolean 필드들이 모두 추가되었습니다.
-     * Room은 이 생성자를 호출하여 데이터베이스의 각 행(row)을 Alarm 객체로 변환합니다.
+     * 알람음 경로를 저장하는 soundUri 필드가 새롭게 추가되었습니다.
+     * Room은 데이터베이스의 각 행(row)을 Alarm 객체로 변환할 때 이 생성자를 호출합니다.
      */
-    public Alarm(int id, int hour, int minute, boolean isEnabled, boolean isVibrationEnabled,
+    public Alarm(int id, int hour, int minute, boolean isEnabled, boolean isVibrationEnabled, @Nullable String soundUri,
                  boolean isMondayEnabled, boolean isTuesdayEnabled, boolean isWednesdayEnabled,
                  boolean isThursdayEnabled, boolean isFridayEnabled, boolean isSaturdayEnabled,
                  boolean isSundayEnabled) {
@@ -71,6 +76,7 @@ public class Alarm {
         this.minute = minute;
         this.isEnabled = isEnabled;
         this.isVibrationEnabled = isVibrationEnabled;
+        this.soundUri = soundUri;
         this.isMondayEnabled = isMondayEnabled;
         this.isTuesdayEnabled = isTuesdayEnabled;
         this.isWednesdayEnabled = isWednesdayEnabled;
@@ -81,26 +87,26 @@ public class Alarm {
     }
 
     /**
-     * [추가] SetAlarmActivity에서 새로운 반복 알람을 생성할 때 사용할 편의 생성자입니다.
-     * 사용자가 UI에서 설정한 값들을 전달받아 Alarm 객체를 만듭니다.
+     * [수정] SetAlarmActivity에서 새로운 알람을 생성할 때 사용할 편의 생성자입니다.
+     * soundUri 필드가 추가되었습니다.
      * @Ignore 어노테이션이 있으므로 Room은 데이터베이스 작업에 이 생성자를 사용하지 않습니다.
      */
     @Ignore
-    public Alarm(int hour, int minute, boolean isEnabled, boolean isVibrationEnabled,
+    public Alarm(int hour, int minute, boolean isEnabled, boolean isVibrationEnabled, @Nullable String soundUri,
                  boolean isMondayEnabled, boolean isTuesdayEnabled, boolean isWednesdayEnabled,
                  boolean isThursdayEnabled, boolean isFridayEnabled, boolean isSaturdayEnabled,
                  boolean isSundayEnabled) {
-        // id는 Room이 자동으로 생성하므로, 여기서는 0으로 초기화합니다.
-        this(0, hour, minute, isEnabled, isVibrationEnabled, isMondayEnabled, isTuesdayEnabled, isWednesdayEnabled, isThursdayEnabled, isFridayEnabled, isSaturdayEnabled, isSundayEnabled);
+        // id는 Room이 자동으로 생성하므로, 여기서는 0으로 초기화하고 기본 생성자를 호출합니다.
+        this(0, hour, minute, isEnabled, isVibrationEnabled, soundUri, isMondayEnabled, isTuesdayEnabled, isWednesdayEnabled, isThursdayEnabled, isFridayEnabled, isSaturdayEnabled, isSundayEnabled);
     }
 
     /**
      * [유지] 반복이 없는 단순 알람을 생성할 때 사용하는 편의 생성자입니다.
-     * @Ignore 어노테이션이 있으므로 Room은 데이터베이스 작업에 이 생성자를 사용하지 않습니다.
+     * 하위 호환성을 위해 유지되며, soundUri는 기본값인 null로 설정됩니다.
      */
     @Ignore
     public Alarm(int hour, int minute, boolean isEnabled, boolean isVibrationEnabled) {
-        this(0, hour, minute, isEnabled, isVibrationEnabled, false, false, false, false, false, false, false);
+        this(0, hour, minute, isEnabled, isVibrationEnabled, null, false, false, false, false, false, false, false);
     }
 
     // --- Getter 및 Setter 메소드 ---
@@ -114,8 +120,12 @@ public class Alarm {
     public boolean isVibrationEnabled() { return isVibrationEnabled; }
     public void setVibrationEnabled(boolean vibrationEnabled) { isVibrationEnabled = vibrationEnabled; }
 
-    // --- [추가] 요일 반복 필드에 대한 Getter 및 Setter ---
+    // --- [추가] 알람음 필드에 대한 Getter 및 Setter ---
+    @Nullable
+    public String getSoundUri() { return soundUri; }
+    public void setSoundUri(@Nullable String soundUri) { this.soundUri = soundUri; }
 
+    // --- [기존] 요일 반복 필드에 대한 Getter 및 Setter ---
     public boolean isMondayEnabled() { return isMondayEnabled; }
     public void setMondayEnabled(boolean mondayEnabled) { isMondayEnabled = mondayEnabled; }
     public boolean isTuesdayEnabled() { return isTuesdayEnabled; }
@@ -132,9 +142,7 @@ public class Alarm {
     public void setSundayEnabled(boolean sundayEnabled) { isSundayEnabled = sundayEnabled; }
 
     /**
-     * [추가] 이 알람이 반복 알람인지 여부를 간단히 확인하는 헬퍼(Helper) 메소드입니다.
-     * 요일 중 하나라도 true로 설정되어 있으면 반복 알람으로 간주합니다.
-     * @return 반복 요일이 하나 이상 설정되어 있으면 true, 아니면 false
+     * [기존] 이 알람이 반복 알람인지 여부를 간단히 확인하는 헬퍼(Helper) 메소드입니다.
      */
     @Ignore
     public boolean isRepeating() {

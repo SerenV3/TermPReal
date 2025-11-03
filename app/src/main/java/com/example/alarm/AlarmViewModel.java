@@ -57,6 +57,16 @@ public class AlarmViewModel extends AndroidViewModel {
     }
 
     /**
+     * [새로운 메소드] '수정 모드'에서 특정 ID의 알람 정보를 가져오기 위한 메소드
+     * @param alarmId 조회할 알람의 고유 ID
+     * @return 해당 알람 정보를 담고 있는 LiveData<Alarm> 객체
+     */
+    public LiveData<Alarm> getAlarmById(int alarmId) {
+        // [핵심 수정] DAO에 있는 동일한 이름의 메소드를 호출하여 결과를 반환합니다.
+        return alarmDao.getAlarmById(alarmId);
+    }
+
+    /**
      * [추가] 새로 생성된 알람의 ID를 관찰하기 위한 LiveData를 외부에 제공합니다.
      * @return 새로 생성된 알람의 ID를 담는 LiveData
      */

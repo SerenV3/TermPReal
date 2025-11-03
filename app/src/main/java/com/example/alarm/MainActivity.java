@@ -250,8 +250,14 @@ public class MainActivity extends AppCompatActivity implements AlarmAdapter.OnAl
                 exitSelectionMode();
             }
         } else {
-            // (현재 미구현) 일반 모드에서는 알람 수정 화면으로 넘어가는 로직을 구현할 수 있습니다.
-            Toast.makeText(this, "알람 수정 기능은 아직 구현되지 않았습니다.", Toast.LENGTH_SHORT).show();
+            // [새로운 내용] 일반 모드에서 아이템을 클릭하면, 해당 알람을 수정하기 위해 SetAlarmActivity로 이동합니다.
+            Alarm alarmToEdit = alarmAdapter.getCurrentList().get(position);
+            Intent intent = new Intent(MainActivity.this, SetAlarmActivity.class);
+
+            // [새로운 내용] 수정할 알람의 ID를 Intent에 담아 전달합니다.
+            // SetAlarmActivity에서는 이 ID를 받아 기존 알람 정보를 불러오게 됩니다.
+            intent.putExtra(ALARM_ID_EXTRA, alarmToEdit.getId());
+            startActivity(intent);
         }
     }
 

@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.StringJoiner;
 
 /**
@@ -51,7 +52,7 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
         // [기존 뷰 유지] 시간(오전/오후, 시:분)과 스위치
         final TextView amPmTextView;
         final TextView timeTextView;
-        // [추가] 반복 요일을 표시할 TextView를 멤버 변수로 추가합니다.
+        // [기존 주석] 반복 요일을 표시할 TextView를 멤버 변수로 추가합니다.
         final TextView repeatDaysTextView;
         final SwitchCompat alarmSwitch;
         final Context context;
@@ -63,7 +64,7 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
             // XML 레이아웃의 뷰들을 ID를 통해 코드와 연결합니다.
             amPmTextView = itemView.findViewById(R.id.amPmTextView);
             timeTextView = itemView.findViewById(R.id.timeTextView);
-            // [추가] XML 레이아웃에 추가한 TextView(repeatDaysTextView)를 ViewHolder에 연결합니다.
+            // [기존 주석] XML 레이아웃에 추가한 TextView(repeatDaysTextView)를 ViewHolder에 연결합니다.
             repeatDaysTextView = itemView.findViewById(R.id.repeatDaysTextView);
             alarmSwitch = itemView.findViewById(R.id.alarmSwitch);
 
@@ -96,46 +97,22 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
         }
 
         /**
-         * [수정] ViewHolder에 데이터를 바인딩할 때, 반복 요일 정보도 업데이트하도록 호출을 추가합니다.
+         * [핵심 수정] ViewHolder에 데이터를 바인딩(연결)하는 메소드입니다.
+         * 이제 시간, 스위치뿐만 아니라 반복 요일 텍스트도 설정합니다.
          */
         void bind(Alarm alarm) {
-            updateTime(alarm);
-            updateSwitch(alarm);
-            // [추가] 반복 요일 정보를 TextView에 표시하는 메소드를 호출합니다.
-            updateRepeatDays(alarm);
-            updateSelectionState(getAdapterPosition());
-        }
-
-        void bind(Alarm alarm, List<Object> payloads) {
-            if (payloads.isEmpty()) {
-                bind(alarm);
-                return;
-            }
-
-            for (Object payload : payloads) {
-                if (payload.equals("PAYLOAD_SWITCH_CHANGED")) {
-                    updateSwitch(alarm);
-                }
-                if (payload.equals("PAYLOAD_SELECTION_CHANGED")) {
-                    updateSelectionState(getAdapterPosition());
-                }
-            }
-        }
-
-        private void updateTime(Alarm alarm) {
+            // 시간(오전/오후, 시:분) 설정
             amPmTextView.setText(alarm.getAmPm());
             timeTextView.setText(alarm.getFormattedTime());
-        }
 
-        private void updateSwitch(Alarm alarm) {
+            // 스위치 상태 설정
             alarmSwitch.setChecked(alarm.isEnabled());
-        }
 
-        /**
-         * [추가] 알람 객체의 반복 요일 정보를 읽어와 TextView에 표시하는 새로운 헬퍼 메소드입니다.
-         * @param alarm 표시할 Alarm 객체
-         */
-        private void updateRepeatDays(Alarm alarm) {
+            /**
+             * 알람 객체의 반복 요일 정보를 읽어와 TextView에 표시하는 새로운 헬퍼 메소드입니다.
+             * @param alarm 표시할 Alarm 객체
+             */
+
             if (alarm.isRepeating()) {
                 // 1. 이 알람이 반복 알람인 경우, TextView를 화면에 보이도록 설정합니다.
                 repeatDaysTextView.setVisibility(View.VISIBLE);
@@ -143,13 +120,14 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
                 // 2. 선택된 요일들을 "월, 화, 수" 형태의 문자열로 만듭니다.
                 // StringJoiner는 문자열을 특정 구분자(여기서는 ", ")로 연결할 때 편리한 클래스입니다.
                 StringJoiner joiner = new StringJoiner(", ");
+                if (alarm.isSundayEnabled()) joiner.add("일");
                 if (alarm.isMondayEnabled()) joiner.add("월");
                 if (alarm.isTuesdayEnabled()) joiner.add("화");
                 if (alarm.isWednesdayEnabled()) joiner.add("수");
                 if (alarm.isThursdayEnabled()) joiner.add("목");
                 if (alarm.isFridayEnabled()) joiner.add("금");
                 if (alarm.isSaturdayEnabled()) joiner.add("토");
-                if (alarm.isSundayEnabled()) joiner.add("일");
+
 
                 // 3. 완성된 문자열을 TextView에 설정합니다.
                 repeatDaysTextView.setText(joiner.toString());
@@ -158,11 +136,14 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
                 // 4. 이 알람이 반복 알람이 아닌 경우, TextView를 화면에서 완전히 숨깁니다.
                 repeatDaysTextView.setVisibility(View.GONE);
             }
+
+
+            // 선택 모드일 때 배경색 변경
+            updateSelectionState(getAdapterPosition());
         }
 
         private void updateSelectionState(int position) {
             if (isSelectionMode && selectedItems.get(position, false)) {
-                // [수정] 직접 정의된 색상 리소스를 사용하도록 수정합니다.
                 itemView.setBackgroundColor(ContextCompat.getColor(context, R.color.selected_item_background));
             } else {
                 itemView.setBackgroundColor(Color.TRANSPARENT);
@@ -183,9 +164,16 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
         holder.bind(getItem(position));
     }
 
+    // [주석 개선] 이 메소드는 부분 업데이트(payload)를 위해 사용되지만, 현재는 전체 업데이트(bind)로 처리하고 있습니다.
     @Override
     public void onBindViewHolder(@NonNull AlarmViewHolder holder, int position, @NonNull List<Object> payloads) {
-        holder.bind(getItem(position), payloads);
+        if (payloads.isEmpty()) {
+            super.onBindViewHolder(holder, position, payloads);
+        } else {
+            // 만약 payload가 있다면 해당 부분만 업데이트 하는 로직을 추가할 수 있습니다.
+            // 지금은 편의상 전체를 다시 그리도록 처리합니다.
+            holder.bind(getItem(position));
+        }
     }
 
     public void setSelectionMode(boolean selectionMode) {
@@ -193,7 +181,7 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
         if (!selectionMode) {
             clearSelection();
         }
-        notifyDataSetChanged();
+        notifyDataSetChanged(); // 이 부분은 개선의 여지가 있습니다.
     }
 
     public boolean isSelectionMode() {
@@ -231,19 +219,23 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
     public static class AlarmDiff extends DiffUtil.ItemCallback<Alarm> {
         @Override
         public boolean areItemsTheSame(@NonNull Alarm oldItem, @NonNull Alarm newItem) {
+            // 두 아이템이 동일한 객체를 참조하는지 ID로 확인합니다.
             return oldItem.getId() == newItem.getId();
         }
 
         /**
-         * [수정] 두 아이템의 내용이 동일한지 확인하는 로직을 업데이트합니다.
-         * 이제 시간, 활성화 상태뿐만 아니라, **모든 요일의 반복 여부**까지 비교해야
-         * DiffUtil이 반복 설정 변경을 올바르게 감지하고 UI를 갱신할 수 있습니다.
+         * [핵심 수정] 두 아이템의 '내용'이 동일한지 확인하는 로직입니다.
+         * 이 메소드가 false를 반환해야만 DiffUtil이 해당 아이템을 변경되었다고 판단하고 UI를 새로 그립니다.
+         * 따라서, 화면에 표시되는 모든 데이터를 여기서 비교해야 합니다.
          */
         @Override
         public boolean areContentsTheSame(@NonNull Alarm oldItem, @NonNull Alarm newItem) {
+            // Objects.equals는 두 객체가 모두 null일 때 true를 반환하여 NullPointerException을 방지합니다.
             return oldItem.getHour() == newItem.getHour() &&
                    oldItem.getMinute() == newItem.getMinute() &&
                    oldItem.isEnabled() == newItem.isEnabled() &&
+                   oldItem.isVibrationEnabled() == newItem.isVibrationEnabled() &&
+                   Objects.equals(oldItem.getSoundUri(), newItem.getSoundUri()) &&
                    oldItem.isMondayEnabled() == newItem.isMondayEnabled() &&
                    oldItem.isTuesdayEnabled() == newItem.isTuesdayEnabled() &&
                    oldItem.isWednesdayEnabled() == newItem.isWednesdayEnabled() &&
@@ -251,16 +243,6 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
                    oldItem.isFridayEnabled() == newItem.isFridayEnabled() &&
                    oldItem.isSaturdayEnabled() == newItem.isSaturdayEnabled() &&
                    oldItem.isSundayEnabled() == newItem.isSundayEnabled();
-        }
-
-        @Override
-        public Object getChangePayload(@NonNull Alarm oldItem, @NonNull Alarm newItem) {
-            if (oldItem.isEnabled() != newItem.isEnabled()) {
-                return "PAYLOAD_SWITCH_CHANGED";
-            }
-            // [개선] 만약 요일 반복 설정만 변경되었다면, 해당 부분만 업데이트 하도록 payload를 추가할 수도 있습니다.
-            // 여기서는 편의상 전체를 다시 그리도록 null을 반환합니다.
-            return null;
         }
     }
 }

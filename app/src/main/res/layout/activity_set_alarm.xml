@@ -83,7 +83,6 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 android:gravity="center">
 
-                <!-- [수정] 모든 ToggleButton에 배경과 텍스트 색상 선택자를 적용합니다. -->
                 <ToggleButton
                     android:id="@+id/sundayToggle"
                     style="?android:attr/borderlessButtonStyle"
@@ -190,6 +189,26 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
 
+            <!-- [추가] 선택된 알람음 파일 이름을 보여줄 TextView -->
+            <TextView
+                android:id="@+id/selectedSoundText" 
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="8dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:textSize="14sp"
+                android:visibility="gone" 
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/alarmSoundSwitch"
+                tools:text="my_favorite_song.mp3" 
+                tools:visibility="visible"/>
+
             <!-- 7. 진동 -->
             <com.google.android.material.switchmaterial.SwitchMaterial
                 android:id="@+id/vibrationSwitch"
@@ -200,7 +219,7 @@
                 android:text="@string/set_alarm_setting_vibration"
                 android:textSize="16sp"
                 android:layout_marginTop="16dp"
-                app:layout_constraintTop_toBottomOf="@+id/alarmSoundSwitch"
+                app:layout_constraintTop_toBottomOf="@+id/selectedSoundText" 
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
 
