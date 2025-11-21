@@ -6,20 +6,23 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Vibrator;
+import android.text.TextUtils;
 import android.util.Log;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
 /**
- * [새 클래스] 알람이 울릴 때 잠금화면 위로 나타나는 전용 Activity 입니다.
+ * [기존 주석] 알람이 울릴 때 잠금화면 위로 나타나는 전용 Activity 입니다.
  * 이 화면의 주된 역할은 사용자에게 알람이 울리고 있음을 알리고, 알람을 해제할 수 있는 버튼을 제공하는 것입니다.
  */
 public class AlarmRingingActivity extends AppCompatActivity {
@@ -27,8 +30,10 @@ public class AlarmRingingActivity extends AppCompatActivity {
     private static final String TAG = "AlarmRingingActivity";
 
     private TextView currentTimeTextView;
+    // [기존 주석] 알람 이름을 표시할 TextView를 멤버 변수로 선언합니다.
+    private TextView alarmNameTextView;
     private Button dismissButton;
-    private Vibrator vibrator; // 진동을 멈추기 위해 필요합니다.
+    private Vibrator vibrator;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,9 +41,7 @@ public class AlarmRingingActivity extends AppCompatActivity {
         setContentView(R.layout.activity_alarm_ringing);
         Log.d(TAG, "알람 울림 화면 생성됨.");
 
-        // --- 1. 잠금화면 위로 Activity를 표시하기 위한 설정 --- //
-        // 이 설정들은 안드로이드 버전 및 기기 정책에 따라 동작이 다를 수 있습니다.
-        // 잠금 화면 위로 창을 표시하도록 설정합니다.
+        // --- [기존 주석] 1. 잠금화면 위로 Activity를 표시하기 위한 설정 --- //
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true);
             setTurnScreenOn(true);
@@ -51,54 +54,93 @@ public class AlarmRingingActivity extends AppCompatActivity {
                     WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
         }
 
-        // --- 2. UI 요소 초기화 및 설정 --- //
+        // --- [기존 주석] 2. UI 요소 초기화 및 설정 --- //
         currentTimeTextView = findViewById(R.id.currentTimeTextView);
+        // [기존 주석] XML 레이아웃의 ringing_alarm_name TextView를 코드와 연결합니다.
+        alarmNameTextView = findViewById(R.id.ringing_alarm_name);
         dismissButton = findViewById(R.id.dismissButton);
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 
-        // 현재 시간을 TextView에 표시합니다.
-        // '오전/오후 h:mm' 형식 (예: 오후 3:30)으로 보여줍니다.
+        // [기존 주석] 현재 시간을 TextView에 표시합니다.
         SimpleDateFormat sdf = new SimpleDateFormat("a h:mm", Locale.getDefault());
         currentTimeTextView.setText(sdf.format(new Date()));
 
-        // --- 3. "알람 해제" 버튼 클릭 리스너 설정 --- //
+        // --- [핵심 수정] 3. 알람 이름 처리 로직 최종 보강 --- //
+        // [새로운 주석] AlarmReceiver로부터 전달받은 Intent에서 알람 ID를 가져옵니다.
+        int alarmId = getIntent().getIntExtra(MainActivity.ALARM_ID_EXTRA, -1);
+        // [새로운 디버깅 주석] Receiver로부터 어떤 알람 ID를 받았는지 확인하기 위해 Logcat에 명확히 기록합니다.
+        // 이 로그를 통해 데이터 전달의 첫 단계가 성공했는지 바로 확인할 수 있습니다.
+        Log.d(TAG, "Intent로부터 전달받은 알람 ID: " + alarmId);
+
+        if (alarmId != -1) {
+            // [기존 주석] 유효한 ID가 있다면, ViewModel을 통해 데이터베이스에서 해당 알람 정보를 가져옵니다.
+            AlarmViewModel alarmViewModel = new ViewModelProvider(this).get(AlarmViewModel.class);
+            alarmViewModel.getAlarmById(alarmId).observe(this, alarm -> {
+                if (alarm != null) {
+                    // [기존 주석] 알람 정보를 성공적으로 가져왔을 때, 이름을 UI에 표시하는 메소드를 호출합니다.
+                    displayAlarmName(alarm.getName());
+                    // [기존 주석] 한 번만 데이터를 가져오면 되므로, 더 이상 관찰할 필요가 없습니다.
+                    alarmViewModel.getAlarmById(alarmId).removeObservers(this);
+                } else {
+                    // [새로운 디버깅 주석] ID는 올바르게 전달받았지만, 데이터베이스에서 해당 ID의 알람을 찾지 못한 경우에 대한 로그입니다.
+                    // 이 로그가 보인다면, 알람이 DB에서 삭제되었거나 다른 문제가 있음을 의미합니다.
+                    Log.w(TAG, "ID " + alarmId + "에 해당하는 알람을 DB에서 찾지 못했습니다.");
+                }
+            });
+        } else {
+            // [새로운 예외 처리 주석] 애초에 유효하지 않은 ID(-1)를 전달받은 경우에 대한 처리입니다.
+            // 이 경우, 알람 이름을 표시할 수 없으므로 TextView를 숨깁니다.
+            Log.w(TAG, "유효하지 않은 알람 ID(-1)를 전달받았습니다. 알람 이름을 표시할 수 없습니다.");
+            displayAlarmName(null);
+        }
+
+        // --- [기존 주석] 4. "알람 해제" 버튼 클릭 리스너 설정 --- //
         dismissButton.setOnClickListener(v -> {
-            Log.d(TAG, "'알람 해제' 버튼 클릭됨.");
+            Log.d(TAG, "\'알람 해제\' 버튼 클릭됨.");
             dismissAlarm();
         });
 
-        // --- 4. [새로운 내용] 뒤로 가기 버튼 처리를 위한 최신 방식 (OnBackPressedDispatcher) --- //
-        // [새 주석] 사용자가 지적한 대로, 기존의 onBackPressed()는 최신 안드로이드에서 제스처에 대해 동작하지 않을 수 있습니다.
-        // AndroidX의 OnBackPressedDispatcher를 사용하는 것이 권장되는 방식이며,
-        // 사용자가 뒤로 가기 제스처를 하거나, 하단의 네비게이션 바의 뒤로 가기 버튼을 눌렀을 때의 동작을 일관되게 처리할 수 있습니다.
+        // --- [기존 주석] 5. 뒤로 가기 버튼 처리 --- //
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                // [새 주석] 뒤로 가기 이벤트가 감지되면, 알람 해제 로직을 실행합니다.
-                Log.d(TAG, "뒤로가기 이벤트 감지됨(최신 방식). 알람 해제.");
+                Log.d(TAG, "뒤로가기 이벤트 감지됨. 알람 해제.");
                 dismissAlarm();
             }
         });
     }
 
     /**
-     * 알람을 완전히 해제하는 메소드.
-     * 음악 재생 서비스와 진동을 모두 중지하고, 현재 화면을 닫습니다.
+     * [기존 주석] 전달받은 알람 이름을 TextView에 표시하거나, 이름이 없으면 숨기는 역할을 합니다.
+     * @param alarmName 데이터베이스에서 가져온 알람의 이름. null일 수 있습니다.
+     */
+    private void displayAlarmName(String alarmName) {
+        // [기존 주석] TextUtils.isEmpty()는 문자열이 null이거나, 빈 문자열("")일 경우 true를 반환합니다.
+        if (!TextUtils.isEmpty(alarmName)) {
+            // [기존 주석] 알람 이름이 있다면, TextView에 이름을 설정하고 화면에 보이도록 합니다.
+            alarmNameTextView.setText(alarmName);
+            alarmNameTextView.setVisibility(View.VISIBLE);
+            Log.d(TAG, "알람 이름 표시: " + alarmName);
+        } else {
+            // [기존 주석] 알람 이름이 없다면, TextView를 화면에서 완전히 숨겨 공간을 차지하지 않게 합니다.
+            alarmNameTextView.setVisibility(View.GONE);
+            Log.d(TAG, "표시할 알람 이름이 없음.");
+        }
+    }
+
+    /**
+     * [기존 주석] 알람을 완전히 해제하는 메소드.
      */
     private void dismissAlarm() {
-        // 1. 음악 재생 서비스(AlarmSoundService)를 중지시킵니다.
-        //    Intent를 사용하여 어떤 서비스를 중지할지 명시적으로 지정합니다.
         Intent stopServiceIntent = new Intent(this, AlarmSoundService.class);
         stopService(stopServiceIntent);
         Log.d(TAG, "AlarmSoundService 중지 명령 전송.");
 
-        // 2. 진동(Vibrator)을 중지시킵니다.
         if (vibrator != null) {
             vibrator.cancel();
             Log.d(TAG, "진동 중지.");
         }
 
-        // 3. 현재 Activity를 종료하여 화면을 닫습니다.
         finish();
     }
 

@@ -20,13 +20,14 @@ import java.util.Objects;
 import java.util.StringJoiner;
 
 /**
+ * [기존 주석] RecyclerView에 알람 목록을 표시하기 위한 어댑터.
  * RecyclerView에 알람 목록을 표시하기 위한 어댑터.
  *
- * `ListAdapter`를 상속받아 `DiffUtil`을 사용합니다.
- * `ListAdapter`는 리스트 데이터의 변경사항을 효율적으로 처리하여 RecyclerView의 성능을 향상시키는
- * 현대적인 방식의 어댑터입니다. DiffUtil이 백그라운드 스레드에서 이전 리스트와 새 리스트를 비교하여
- * 꼭 필요한 최소한의 업데이트(삽입, 삭제, 이동, 변경)만 계산해서 알려주므로,
- * `notifyDataSetChanged()`를 호출하는 것보다 훨씬 효율적입니다.
+ *  `ListAdapter`를 상속받아 `DiffUtil`을 사용합니다.
+ *   `ListAdapter`는 리스트 데이터의 변경사항을 효율적으로 처리하여 RecyclerView의 성능을 향상시키는
+ *   현대적인 방식의 어댑터입니다. DiffUtil이 백그라운드 스레드에서 이전 리스트와 새 리스트를 비교하여
+ *   꼭 필요한 최소한의 업데이트(삽입, 삭제, 이동, 변경)만 계산해서 알려주므로,
+ *   `notifyDataSetChanged()`를 호출하는 것보다 훨씬 효율적.
  */
 public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolder> {
 
@@ -46,13 +47,11 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
     }
 
     /**
-     * 각 아이템 뷰의 UI 요소들을 보관하는 ViewHolder 클래스.
+     * [기존 주석] 각 아이템 뷰의 UI 요소들을 보관하는 ViewHolder 클래스.
      */
     public class AlarmViewHolder extends RecyclerView.ViewHolder {
-        // [기존 뷰 유지] 시간(오전/오후, 시:분)과 스위치
         final TextView amPmTextView;
         final TextView timeTextView;
-        // [기존 주석] 반복 요일을 표시할 TextView를 멤버 변수로 추가합니다.
         final TextView repeatDaysTextView;
         final SwitchCompat alarmSwitch;
         final Context context;
@@ -61,10 +60,8 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
             super(itemView);
             context = itemView.getContext();
 
-            // XML 레이아웃의 뷰들을 ID를 통해 코드와 연결합니다.
             amPmTextView = itemView.findViewById(R.id.amPmTextView);
             timeTextView = itemView.findViewById(R.id.timeTextView);
-            // [기존 주석] XML 레이아웃에 추가한 TextView(repeatDaysTextView)를 ViewHolder에 연결합니다.
             repeatDaysTextView = itemView.findViewById(R.id.repeatDaysTextView);
             alarmSwitch = itemView.findViewById(R.id.alarmSwitch);
 
@@ -97,28 +94,15 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
         }
 
         /**
-         * [핵심 수정] ViewHolder에 데이터를 바인딩(연결)하는 메소드입니다.
-         * 이제 시간, 스위치뿐만 아니라 반복 요일 텍스트도 설정합니다.
+         * [기존 주석] ViewHolder에 데이터를 바인딩(연결)하는 메소드입니다.
          */
         void bind(Alarm alarm) {
-            // 시간(오전/오후, 시:분) 설정
             amPmTextView.setText(alarm.getAmPm());
             timeTextView.setText(alarm.getFormattedTime());
-
-            // 스위치 상태 설정
             alarmSwitch.setChecked(alarm.isEnabled());
 
-            /**
-             * 알람 객체의 반복 요일 정보를 읽어와 TextView에 표시하는 새로운 헬퍼 메소드입니다.
-             * @param alarm 표시할 Alarm 객체
-             */
-
             if (alarm.isRepeating()) {
-                // 1. 이 알람이 반복 알람인 경우, TextView를 화면에 보이도록 설정합니다.
                 repeatDaysTextView.setVisibility(View.VISIBLE);
-
-                // 2. 선택된 요일들을 "월, 화, 수" 형태의 문자열로 만듭니다.
-                // StringJoiner는 문자열을 특정 구분자(여기서는 ", ")로 연결할 때 편리한 클래스입니다.
                 StringJoiner joiner = new StringJoiner(", ");
                 if (alarm.isSundayEnabled()) joiner.add("일");
                 if (alarm.isMondayEnabled()) joiner.add("월");
@@ -127,18 +111,11 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
                 if (alarm.isThursdayEnabled()) joiner.add("목");
                 if (alarm.isFridayEnabled()) joiner.add("금");
                 if (alarm.isSaturdayEnabled()) joiner.add("토");
-
-
-                // 3. 완성된 문자열을 TextView에 설정합니다.
                 repeatDaysTextView.setText(joiner.toString());
-
             } else {
-                // 4. 이 알람이 반복 알람이 아닌 경우, TextView를 화면에서 완전히 숨깁니다.
                 repeatDaysTextView.setVisibility(View.GONE);
             }
 
-
-            // 선택 모드일 때 배경색 변경
             updateSelectionState(getAdapterPosition());
         }
 
@@ -164,14 +141,11 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
         holder.bind(getItem(position));
     }
 
-    // [주석 개선] 이 메소드는 부분 업데이트(payload)를 위해 사용되지만, 현재는 전체 업데이트(bind)로 처리하고 있습니다.
     @Override
     public void onBindViewHolder(@NonNull AlarmViewHolder holder, int position, @NonNull List<Object> payloads) {
         if (payloads.isEmpty()) {
             super.onBindViewHolder(holder, position, payloads);
         } else {
-            // 만약 payload가 있다면 해당 부분만 업데이트 하는 로직을 추가할 수 있습니다.
-            // 지금은 편의상 전체를 다시 그리도록 처리합니다.
             holder.bind(getItem(position));
         }
     }
@@ -181,7 +155,7 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
         if (!selectionMode) {
             clearSelection();
         }
-        notifyDataSetChanged(); // 이 부분은 개선의 여지가 있습니다.
+        notifyDataSetChanged();
     }
 
     public boolean isSelectionMode() {
@@ -214,26 +188,25 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
     }
 
     /**
-     * `ListAdapter`가 데이터 변경을 효율적으로 처리하기 위해 사용하는 DiffUtil.ItemCallback 구현체.
+     * [기존 주석] ListAdapter가 데이터 변경을 효율적으로 처리하기 위해 사용하는 DiffUtil.ItemCallback 구현체.
      */
     public static class AlarmDiff extends DiffUtil.ItemCallback<Alarm> {
         @Override
         public boolean areItemsTheSame(@NonNull Alarm oldItem, @NonNull Alarm newItem) {
-            // 두 아이템이 동일한 객체를 참조하는지 ID로 확인합니다.
             return oldItem.getId() == newItem.getId();
         }
 
         /**
-         * [핵심 수정] 두 아이템의 '내용'이 동일한지 확인하는 로직입니다.
-         * 이 메소드가 false를 반환해야만 DiffUtil이 해당 아이템을 변경되었다고 판단하고 UI를 새로 그립니다.
-         * 따라서, 화면에 표시되는 모든 데이터를 여기서 비교해야 합니다.
+         * [기존 주석, 내용 추가] 두 아이템의 '내용'이 동일한지 확인하는 로직입니다.
+         * [새로운 내용] 알람 이름과 날씨 TTS 설정을 포함하여, 화면에 표시되거나 데이터에 영향을 미치는
+         * 모든 속성을 비교해야 정확한 UI 업데이트가 이루어집니다.
          */
         @Override
         public boolean areContentsTheSame(@NonNull Alarm oldItem, @NonNull Alarm newItem) {
-            // Objects.equals는 두 객체가 모두 null일 때 true를 반환하여 NullPointerException을 방지합니다.
             return oldItem.getHour() == newItem.getHour() &&
                    oldItem.getMinute() == newItem.getMinute() &&
                    oldItem.isEnabled() == newItem.isEnabled() &&
+                   Objects.equals(oldItem.getName(), newItem.getName()) && // 알람 이름 비교 추가
                    oldItem.isVibrationEnabled() == newItem.isVibrationEnabled() &&
                    Objects.equals(oldItem.getSoundUri(), newItem.getSoundUri()) &&
                    oldItem.isMondayEnabled() == newItem.isMondayEnabled() &&
@@ -242,7 +215,8 @@ public class AlarmAdapter extends ListAdapter<Alarm, AlarmAdapter.AlarmViewHolde
                    oldItem.isThursdayEnabled() == newItem.isThursdayEnabled() &&
                    oldItem.isFridayEnabled() == newItem.isFridayEnabled() &&
                    oldItem.isSaturdayEnabled() == newItem.isSaturdayEnabled() &&
-                   oldItem.isSundayEnabled() == newItem.isSundayEnabled();
+                   oldItem.isSundayEnabled() == newItem.isSundayEnabled() &&
+                   oldItem.isWeatherTtsEnabled() == newItem.isWeatherTtsEnabled(); // 날씨 TTS 설정 비교 추가
         }
     }
 }

@@ -2,6 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- [기존 주석] 날씨 API와 통신하기 위해 인터넷 사용 권한이 반드시 필요합니다. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- [기존 주석] 사용자의 현재 위치를 기반으로 날씨를 조회하기 위한 권한입니다. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <!-- [기존 주석] 잠금 화면 위로 Activity를 표시하고 기기를 깨우기 위한 권한 -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
@@ -24,20 +31,18 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Alarm">
 
-        <!-- [새로운 Activity 등록] 알람이 울릴 때 표시될 전용 화면입니다. -->
+        <!-- [새로운 내용] 날씨 정보를 표시하고 TTS 설정을 담당할 Activity를 등록합니다. -->
+        <activity
+            android:name=".WeatherActivity"
+            android:exported="false" />
+
+        <!-- [기존 주석] 알람이 울릴 때 표시될 전용 화면입니다. -->
         <activity
             android:name=".AlarmRingingActivity"
             android:exported="false"
             android:launchMode="singleInstance"
             android:showWhenLocked="true"
             android:turnScreenOn="true" />
-            <!--
-                 [새 주석] 위 속성들의 역할:
-                 - android:exported="false": 이 Activity는 우리 앱 내부(AlarmReceiver)에서만 호출할 수 있습니다.
-                 - android:launchMode="singleInstance": 이 Activity의 인스턴스는 시스템 전체에서 단 하나만 존재합니다. 알람이 여러 번 울려도 화면이 여러 개 뜨지 않습니다.
-                 - android:showWhenLocked="true": 기기가 잠금 상태일 때에도 이 Activity가 표시되도록 허용합니다.
-                 - android:turnScreenOn="true": 이 Activity가 시작될 때 기기 화면이 켜지도록 합니다.
-            -->
 
         <activity
             android:name=".SetAlarmActivity"
@@ -53,7 +58,7 @@
             </intent-filter>
         </activity>
 
-        <!-- AlarmReceiver 등록 -->
+        <!-- [기존 주석] AlarmReceiver 등록 -->
         <receiver
             android:name=".AlarmReceiver"
             android:enabled="true"

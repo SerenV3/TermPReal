@@ -1,6 +1,15 @@
+import java.util.Properties
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use {
+        localProperties.load(it)
+    }
+}
+
 plugins {
     alias(libs.plugins.android.application)
-    // KSP 플러그인 라인 제거
 }
 
 android {
@@ -15,6 +24,14 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // [핵심 수정] local.properties에서 읽어온 API 키의 양쪽 끝에 있을 수 있는 따옴표를 제거합니다.
+        // 이렇게 하면 local.properties에 키를 "YOUR_KEY"로 저장하든 YOUR_KEY로 저장하든 모두 정상적으로 처리됩니다.
+        var weatherApiKey = localProperties.getProperty("weather.api.key", "")
+        if (weatherApiKey.startsWith("\"") && weatherApiKey.endsWith("\"")) {
+            weatherApiKey = weatherApiKey.substring(1, weatherApiKey.length - 1)
+        }
+        buildConfigField("String", "WEATHER_API_KEY", "\"$weatherApiKey\"")
     }
 
     buildTypes {
@@ -30,17 +47,21 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    // Java 프로젝트에서 Room 사용 시 dataBinding 또는 viewBinding 관련 설정이 필요할 수 있으나,
-    // 현재는 Room 어노테이션 프로세서만 집중합니다.
+    buildFeatures {
+        buildConfig = true
+    }
 }
 
 dependencies {
-    val roomVersion = "2.6.1" // ROOM 라이브러리 버전 정의
+    val roomVersion = "2.6.1"
 
     implementation("androidx.room:room-runtime:$roomVersion")
-    annotationProcessor("androidx.room:room-compiler:$roomVersion") // Java 프로젝트에서는 이것을 사용
-    // ksp("androidx.room:room-compiler:$roomVersion") // Kotlin 및 KSP 사용 시 -> 주석 처리 또는 삭제
-    implementation("androidx.room:room-ktx:$roomVersion") // Kotlin Coroutines 및 Flow 지원 (Java에서도 LiveData 사용 시 유용)
+    annotationProcessor("androidx.room:room-compiler:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.google.android.gms:play-services-location:21.2.0")
 
     implementation(libs.appcompat)
     implementation(libs.material)

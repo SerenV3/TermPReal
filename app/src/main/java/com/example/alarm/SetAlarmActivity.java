@@ -9,9 +9,11 @@ import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.OpenableColumns;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
@@ -30,8 +32,7 @@ import com.google.android.material.switchmaterial.SwitchMaterial;
 import java.util.Locale;
 
 /**
- * [기존 주석 개선] 새로운 알람을 설정하거나 '기존 알람을 수정'하는 화면(Activity)입니다.
- * MainActivity로부터 알람 ID를 전달받았는지 여부에 따라 '생성 모드' 또는 '수정 모드'로 동작합니다.
+ * [기존 주석] 새로운 알람을 설정하거나 '기존 알람을 수정'하는 화면(Activity)입니다.
  */
 public class SetAlarmActivity extends AppCompatActivity {
 
@@ -39,43 +40,38 @@ public class SetAlarmActivity extends AppCompatActivity {
 
     // --- UI 요소 --- //
     private TimePicker timePicker;
+    private EditText alarmNameEditText;
+    private ToggleButton mondayButton, tuesdayButton, wednesdayButton, thursdayButton, fridayButton, saturdayButton, sundayButton;
+    private SwitchMaterial alarmSoundSwitch;
+    private TextView selectedSoundTextView;
+    // [새로운 내용] 날씨 TTS 스위치를 위한 UI 변수 선언
+    private SwitchMaterial weatherTtsSwitch;
+    private SwitchMaterial vibrationSwitch;
     private Button saveAlarmButton;
     private Button cancelButton;
-    private SwitchMaterial vibrationSwitch;
-    private ToggleButton mondayButton, tuesdayButton, wednesdayButton, thursdayButton, fridayButton, saturdayButton, sundayButton;
-
-    // --- [기존 주석] 알람음 설정을 위한 UI 요소 및 변수 ---
-    private SwitchMaterial alarmSoundSwitch;
-    private TextView selectedSoundTextView; // 선택된 음악 파일의 이름을 보여줄 TextView
 
     // --- 비즈니스 로직 및 데이터 관련 --- //
     private AlarmViewModel alarmViewModel;
     private AlarmScheduler alarmScheduler;
     private Vibrator vibrator;
 
-    // --- [기존 주석] 외부 Activity 결과 처리를 위한 런처 및 데이터 변수 ---
-    private ActivityResultLauncher<Intent> pickSoundLauncher; // 파일 선택기 결과를 처리할 런처
-    private Uri selectedSoundUri; // 사용자가 선택한 음악 파일의 URI를 임시로 저장하는 변수
+    // --- 외부 Activity 결과 처리를 위한 런처 --- //
+    private ActivityResultLauncher<Intent> pickSoundLauncher;
+    // [새로운 내용] WeatherActivity의 결과를 처리할 런처를 선언합니다.
+    private ActivityResultLauncher<Intent> weatherActivityLauncher;
+    private Uri selectedSoundUri;
 
-    // --- [새로운 내용] 알람 수정 모드를 위한 변수 --- //
-    /** 현재 '수정 모드'인지 여부를 나타내는 플래그. true이면 수정 모드, false이면 생성 모드입니다. */
+    // --- [기존 주석] 알람 수정 모드를 위한 변수 --- //
     private boolean isEditMode = false;
-    /** '수정 모드'일 경우, 수정 대상 알람의 ID를 저장합니다. 생성 모드일 경우 -1로 유지됩니다. */
     private int editingAlarmId = -1;
 
-
-    /**
-     * Activity가 생성될 때 가장 먼저 호출되는 메소드.
-     * 앱의 초기 설정을 여기서 수행합니다.
-     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_set_alarm);
 
-        // [기존 주석 개선] 파일 선택기(SAF)의 결과를 처리할 런처를 초기화합니다.
-        // 이 코드는 Activity의 생명주기상 UI가 생성되기 전, onCreate의 가장 앞부분에 위치하는 것이 안정적입니다.
-        setupSoundPickerLauncher();
+        // [기존 주석] Activity가 생성될 때 런처들을 미리 초기화합니다.
+        setupLaunchers();
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.setAlarm), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -87,23 +83,58 @@ public class SetAlarmActivity extends AppCompatActivity {
         alarmScheduler = new AlarmScheduler(this);
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 
-        // 1. 모든 뷰(View)들을 초기화합니다.
         setupViews();
-        // 2. 버튼 클릭 등 사용자의 입력을 받을 리스너들을 설정합니다.
         setupListeners();
-        // 3. [새로운 내용] Intent를 확인하여 '수정 모드' 또는 '생성 모드'를 결정하고 그에 맞는 초기화를 수행합니다.
         handleIntent();
     }
 
     /**
-     * [기존 주석] XML 레이아웃에 정의된 UI 뷰들을 찾아와 멤버 변수에 할당합니다.
+     * [새로운 메소드] 화면 시작 시, 다른 Activity를 호출하고 그 결과를 받아 처리할 런처들을 설정합니다.
+     */
+    private void setupLaunchers() {
+        // [기존 주석] 알람음 선택 결과를 처리하는 런처
+        pickSoundLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        Uri uri = result.getData().getData();
+                        if (uri != null) {
+                            getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            this.selectedSoundUri = uri;
+                            updateSelectedSoundUI(uri);
+                        }
+                    } else {
+                        if (selectedSoundUri == null) {
+                            alarmSoundSwitch.setChecked(false);
+                        }
+                    }
+                }
+        );
+
+        // [새로운 내용] 날씨 설정 화면(WeatherActivity)의 결과를 처리하는 런처를 등록합니다.
+        weatherActivityLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    // WeatherActivity에서 설정이 완료되었는지(RESULT_OK) 여부를 확인합니다.
+                    if (result.getResultCode() == RESULT_OK) {
+                        // 완료되었다면, 날씨 TTS 기능이 활성화된 것으로 간주하고 스위치를 켠 상태로 유지합니다.
+                        weatherTtsSwitch.setChecked(true);
+                    } else {
+                        // 완료되지 않았거나 사용자가 뒤로가기로 나왔다면, 스위치를 끈 상태로 되돌립니다.
+                        weatherTtsSwitch.setChecked(false);
+                    }
+                }
+        );
+    }
+
+    /**
+     * [기존 주석, 내용 추가] XML 레이아웃의 모든 UI 뷰들을 찾아와 멤버 변수에 할당합니다.
      */
     private void setupViews() {
         timePicker = findViewById(R.id.timePicker);
-        saveAlarmButton = findViewById(R.id.saveButton);
-        cancelButton = findViewById(R.id.cancelButton);
-        vibrationSwitch = findViewById(R.id.vibrationSwitch);
         timePicker.setIs24HourView(false);
+
+        alarmNameEditText = findViewById(R.id.alarmNameEditText);
 
         mondayButton = findViewById(R.id.mondayToggle);
         tuesdayButton = findViewById(R.id.tuesdayToggle);
@@ -113,101 +144,98 @@ public class SetAlarmActivity extends AppCompatActivity {
         saturdayButton = findViewById(R.id.saturdayToggle);
         sundayButton = findViewById(R.id.sundayToggle);
 
-        // [기존 주석] 알람음 관련 UI 요소를 찾아옵니다.
         alarmSoundSwitch = findViewById(R.id.alarmSoundSwitch);
         selectedSoundTextView = findViewById(R.id.selectedSoundText);
+
+        // [새로운 내용] 날씨 TTS 스위치 뷰를 코드와 연결합니다.
+        weatherTtsSwitch = findViewById(R.id.weatherTtsSwitch);
+
+        vibrationSwitch = findViewById(R.id.vibrationSwitch);
+        saveAlarmButton = findViewById(R.id.saveButton);
+        cancelButton = findViewById(R.id.cancelButton);
     }
 
     /**
-     * [기존 주석] 각종 버튼의 클릭 이벤트를 처리하는 리스너를 설정합니다.
+     * [기존 주석, 내용 추가] 각종 UI 요소의 이벤트를 처리하는 리스너를 설정합니다.
      */
     private void setupListeners() {
         saveAlarmButton.setOnClickListener(v -> saveAlarm());
         cancelButton.setOnClickListener(v -> finish());
 
-        vibrationSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (isChecked) {
-                playDefaultVibration();
-            }
-        });
-
-        // [기존 주석 개선] 알람음 스위치의 상태 변경 리스너를 설정합니다.
         alarmSoundSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            // [새로운 내용] isChecked가 true이고, 사용자가 스위치를 직접 눌렀을 때만 파일 선택기를 엽니다.
-            // 수정 모드에서 loadAlarmData()에 의해 프로그램이 스위치를 켤 때는 파일 선택기가 열리면 안되기 때문입니다.
-            // isPressed()는 사용자의 터치에 의해 상태가 변경될 때 true를 반환합니다.
             if (isChecked && buttonView.isPressed()) {
                 Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 intent.setType("audio/*");
                 pickSoundLauncher.launch(intent);
             } else if (!isChecked) {
-                // 스위치가 꺼지면, 선택했던 알람음 정보를 모두 초기화합니다.
                 selectedSoundUri = null;
                 updateSelectedSoundUI(null);
+            }
+        });
+
+        // [새로운 내용] 날씨 TTS 스위치의 상태 변경 리스너를 설정합니다.
+        weatherTtsSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            // [새로운 주석] isChecked: 스위치가 켜졌는지(true) 꺼졌는지(false) 나타냅니다.
+            // buttonView.isPressed(): 사용자가 직접 터치하여 상태를 변경했을 때만 true가 됩니다.
+            // (수정모드에서 DB값으로 스위치를 켤 때 원치 않게 화면이 넘어가는 것을 방지합니다.)
+            if (isChecked && buttonView.isPressed()) {
+                // [새로운 주석] 스위치가 켜지면, WeatherActivity를 시작합니다.
+                Intent intent = new Intent(this, WeatherActivity.class);
+                // [새로운 주석] 위에서 등록한 런처를 사용해 Activity를 시작합니다. 결과를 받아오기 위함입니다.
+                weatherActivityLauncher.launch(intent);
+            }
+        });
+
+        vibrationSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                playDefaultVibration();
             }
         });
     }
 
     /**
-     * [새로운 메소드] Activity 시작 시 전달받은 Intent를 처리하여 '수정 모드' 또는 '생성 모드'를 결정합니다.
+     * [기존 주석] Activity 시작 시 전달받은 Intent를 처리하여 모드를 결정합니다.
      */
     private void handleIntent() {
         Intent intent = getIntent();
-        // MainActivity로부터 ALARM_ID_EXTRA 키로 값이 전달되었는지 확인합니다.
         if (intent != null && intent.hasExtra(MainActivity.ALARM_ID_EXTRA)) {
             editingAlarmId = intent.getIntExtra(MainActivity.ALARM_ID_EXTRA, -1);
             if (editingAlarmId != -1) {
-                // 유효한 ID가 있다면, '수정 모드'로 설정합니다.
                 isEditMode = true;
-                setTitle("알람 수정"); // Activity의 타이틀을 변경하여 사용자에게 현재 모드를 명확히 알려줍니다.
-                Log.d(TAG, "알람 수정 모드로 시작. ID: " + editingAlarmId);
-                // 데이터베이스에서 해당 알람 정보를 불러와 UI에 채웁니다.
+                setTitle("알람 수정");
                 loadAlarmData(editingAlarmId);
             }
         } else {
-            // 전달된 ID가 없다면, '알람 추가' 모드입니다.
             isEditMode = false;
             setTitle("알람 추가");
-            Log.d(TAG, "알람 추가 모드로 시작.");
-            // '알람 추가' 모드에서는, 알람이 DB에 저장된 후 생성된 ID를 관찰해야 합니다.
             observeNewAlarmId();
         }
     }
 
     /**
-     * [새로운 메소드] '수정 모드'일 때, 데이터베이스에서 알람 정보를 가져와 UI에 표시합니다.
-     * @param alarmId 수정할 알람의 ID
+     * [기존 주석] '수정 모드'일 때, DB에서 알람 정보를 가져와 UI에 표시합니다.
      */
     private void loadAlarmData(int alarmId) {
-        // ViewModel을 통해 특정 ID의 알람 정보를 LiveData로 가져옵니다.
-        // LiveData를 사용하면 데이터베이스 조회가 비동기적으로 처리되어 UI 멈춤 현상을 막을 수 있습니다.
         alarmViewModel.getAlarmById(alarmId).observe(this, alarm -> {
             if (alarm != null) {
-                // 데이터베이스에서 알람 정보를 성공적으로 가져왔을 때 UI를 채웁니다.
-                Log.d(TAG, "DB에서 알람(" + alarmId + ") 정보 로드 완료. UI를 채웁니다.");
                 populateUiWithAlarmData(alarm);
-
-                // [새로운 내용] 매우 중요! 데이터를 한 번 성공적으로 불러온 후에는, 더 이상 관찰(observe)을 계속할 필요가 없습니다.
-                // 만약 이 코드가 없으면, 사용자가 화면에서 요일 버튼을 누르는 등 UI를 조작할 때마다
-                // (내부적으로는 DB가 업데이트되고 LiveData가 변경되어) 이 부분이 다시 호출되면서
-                // 사용자의 조작이 초기 상태로 다시 덮어쓰여지는 문제가 발생할 수 있습니다.
                 alarmViewModel.getAlarmById(alarmId).removeObservers(this);
             }
         });
     }
 
     /**
-     * [새로운 메소드] 전달받은 Alarm 객체의 데이터로 모든 UI 요소(시간, 요일, 스위치 등)를 설정합니다.
-     * @param alarm UI에 표시할 데이터가 담긴 Alarm 객체
+     * [기존 주석, 내용 추가] Alarm 객체 데이터로 모든 UI 요소를 설정합니다.
      */
     private void populateUiWithAlarmData(Alarm alarm) {
         timePicker.setHour(alarm.getHour());
         timePicker.setMinute(alarm.getMinute());
 
-        vibrationSwitch.setChecked(alarm.isVibrationEnabled());
+        if (alarm.getName() != null) {
+            alarmNameEditText.setText(alarm.getName());
+        }
 
-        // [핵심 수정] isMonday() -> isMondayEnabled() 와 같이 올바른 getter 메소드 이름을 사용합니다.
         mondayButton.setChecked(alarm.isMondayEnabled());
         tuesdayButton.setChecked(alarm.isTuesdayEnabled());
         wednesdayButton.setChecked(alarm.isWednesdayEnabled());
@@ -225,106 +253,85 @@ public class SetAlarmActivity extends AppCompatActivity {
             alarmSoundSwitch.setChecked(false);
             updateSelectedSoundUI(null);
         }
+
+        // [새로운 내용] DB에서 가져온 날씨 TTS 설정값으로 스위치의 초기 상태를 설정합니다.
+        weatherTtsSwitch.setChecked(alarm.isWeatherTtsEnabled());
+
+        vibrationSwitch.setChecked(alarm.isVibrationEnabled());
     }
 
     /**
-     * [기존 주석 개선] 파일 선택기(SAF)의 결과를 처리하는 ActivityResultLauncher를 설정합니다.
-     * 사용자가 음악 파일을 선택하고 돌아오면, 이 런처의 콜백(람다식)이 실행됩니다.
-     */
-    private void setupSoundPickerLauncher() {
-        pickSoundLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                        // 파일 선택이 성공적으로 완료된 경우
-                        Uri uri = result.getData().getData();
-                        if (uri != null) {
-                            // [기존 주석] 앱이 재시작되어도 파일에 접근할 수 있도록 영구적인 읽기 권한을 얻습니다.
-                            getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-
-                            // 선택된 URI를 멤버 변수에 저장하고, 파일 이름을 화면에 표시합니다.
-                            this.selectedSoundUri = uri;
-                            updateSelectedSoundUI(uri);
-                        }
-                    } else {
-                        // 파일 선택을 취소했거나 실패한 경우
-                        // [새로운 내용] 사용자가 파일 선택을 취소해도, 이전에 이미 설정된 알람음이 있었다면 스위치가 꺼지면 안됩니다.
-                        // selectedSoundUri가 null일 때만 (즉, 처음 설정 시도 중 취소했을 때만) 스위치를 끕니다.
-                        if (selectedSoundUri == null) {
-                            alarmSoundSwitch.setChecked(false);
-                        }
-                    }
-                }
-        );
-    }
-
-    /**
-     * [핵심 수정] '저장' 버튼을 눌렀을 때의 동작입니다.
-     * '수정 모드'와 '생성 모드'를 구분하여 각각 다른 로직을 수행합니다.
+     * [기존 주석] '저장' 버튼을 눌렀을 때의 동작입니다.
      */
     private void saveAlarm() {
-        // 현재 UI 상태로부터 알람 정보를 읽어옵니다.
+        String alarmName = alarmNameEditText.getText().toString().trim();
+        if (TextUtils.isEmpty(alarmName)) {
+            alarmName = null;
+        }
+
         int hour = timePicker.getHour();
         int minute = timePicker.getMinute();
         boolean isVibrationEnabled = vibrationSwitch.isChecked();
         String soundUriString = (selectedSoundUri != null) ? selectedSoundUri.toString() : null;
+        // [새로운 내용] 날씨 TTS 스위치의 현재 상태를 변수에 저장합니다.
+        boolean isWeatherTtsEnabled = weatherTtsSwitch.isChecked();
 
         if (isEditMode) {
-            // --- 수정 모드일 경우 ---
             Log.d(TAG, "수정 모드에서 저장 버튼 클릭됨. 알람 ID: " + editingAlarmId);
-            // 기존 알람 ID(editingAlarmId)와 현재 UI의 설정값으로 Alarm 객체를 생성합니다.
-            // 수정된 알람은 항상 활성화(true) 상태로 저장됩니다.
+            // [새로운 내용] Alarm 객체 생성자에 isWeatherTtsEnabled 값을 추가하여 전달합니다.
             Alarm updatedAlarm = new Alarm(
-                    editingAlarmId, hour, minute, true, isVibrationEnabled, soundUriString,
+                    editingAlarmId, alarmName, hour, minute, true, isVibrationEnabled, soundUriString,
                     mondayButton.isChecked(), tuesdayButton.isChecked(), wednesdayButton.isChecked(),
-                    thursdayButton.isChecked(), fridayButton.isChecked(), saturdayButton.isChecked(), sundayButton.isChecked()
+                    thursdayButton.isChecked(), fridayButton.isChecked(), saturdayButton.isChecked(), sundayButton.isChecked(),
+                    isWeatherTtsEnabled // 날씨 TTS 설정값 추가
             );
 
-            // 1. 데이터베이스에 알람 정보를 업데이트(UPDATE)합니다.
             alarmViewModel.update(updatedAlarm);
-            // 2. 시스템에 예약된 기존 알람을 취소합니다. (ID가 동일하므로 PendingIntent가 같아 덮어쓰기 전에 취소하는 것이 안전합니다.)
             alarmScheduler.cancel(updatedAlarm);
-            // 3. 수정된 정보로 시스템 알람을 다시 예약합니다.
             alarmScheduler.schedule(updatedAlarm);
 
             Toast.makeText(this, "알람이 수정되었습니다.", Toast.LENGTH_SHORT).show();
-            finish(); // 수정을 완료하고 화면을 닫습니다.
+            finish();
 
         } else {
-            // --- 생성 모드일 경우 (기존 로직과 거의 동일) ---
             Log.d(TAG, "생성 모드에서 저장 버튼 클릭됨.");
-            // ID 없이 Alarm 객체를 생성합니다. ID는 데이터베이스에 삽입될 때 Room 라이브러리에 의해 자동 생성됩니다.
+            // [새로운 내용] Alarm 객체 생성자에 isWeatherTtsEnabled 값을 추가하여 전달합니다.
             Alarm newAlarm = new Alarm(
-                    hour, minute, true, isVibrationEnabled, soundUriString,
+                    alarmName, hour, minute, true, isVibrationEnabled, soundUriString,
                     mondayButton.isChecked(), tuesdayButton.isChecked(), wednesdayButton.isChecked(),
-                    thursdayButton.isChecked(), fridayButton.isChecked(), saturdayButton.isChecked(), sundayButton.isChecked()
+                    thursdayButton.isChecked(), fridayButton.isChecked(), saturdayButton.isChecked(), sundayButton.isChecked(),
+                    isWeatherTtsEnabled // 날씨 TTS 설정값 추가
             );
-            // ViewModel에게 이 새로운 알람 객체의 삽입(INSERT)을 요청합니다.
-            // 이 요청 후에는 observeNewAlarmId()가 호출되어 시스템 알람 예약 등 후속 처리를 하게 됩니다.
             alarmViewModel.insert(newAlarm);
         }
     }
 
     /**
-     * [기존 주석 개선] ViewModel의 newAlarmId LiveData를 관찰하여, ID가 생성되면 실제 시스템 알람을 예약합니다.
-     * 이 메소드는 '생성 모드'에서만 호출되도록 handleIntent()에서 분기 처리되었습니다.
+     * [기존 주석] 새 알람 ID를 관찰하여 시스템 알람을 예약합니다.
      */
     private void observeNewAlarmId() {
         alarmViewModel.getNewAlarmId().observe(this, newAlarmId -> {
             if (newAlarmId != null) {
+                String alarmName = alarmNameEditText.getText().toString().trim();
+                if (TextUtils.isEmpty(alarmName)) {
+                    alarmName = null;
+                }
+
                 int alarmId = newAlarmId.intValue();
                 int hour = timePicker.getHour();
                 int minute = timePicker.getMinute();
                 boolean isVibrationEnabled = vibrationSwitch.isChecked();
                 String soundUriString = (selectedSoundUri != null) ? selectedSoundUri.toString() : null;
+                // [새로운 내용] 날씨 TTS 스위치의 현재 상태를 변수에 저장합니다.
+                boolean isWeatherTtsEnabled = weatherTtsSwitch.isChecked();
 
-                // [기존 주석] ID와 알람음 URI까지 포함된 '완성된' Alarm 객체를 생성합니다.
-                // [핵심 수정] isMonday() -> isMondayEnabled() 와 같이 올바른 getter 메소드 이름을 사용합니다.
+                // [새로운 내용] Alarm 객체 생성 시 isWeatherTtsEnabled 값을 추가하여 완전한 객체를 만듭니다.
                 Alarm alarmToSchedule = new Alarm(
-                        alarmId,
+                        alarmId, alarmName,
                         hour, minute, true, isVibrationEnabled, soundUriString,
                         mondayButton.isChecked(), tuesdayButton.isChecked(), wednesdayButton.isChecked(),
-                        thursdayButton.isChecked(), fridayButton.isChecked(), saturdayButton.isChecked(), sundayButton.isChecked()
+                        thursdayButton.isChecked(), fridayButton.isChecked(), saturdayButton.isChecked(), sundayButton.isChecked(),
+                        isWeatherTtsEnabled // 날씨 TTS 설정값 추가
                 );
 
                 alarmScheduler.schedule(alarmToSchedule);
@@ -338,18 +345,13 @@ public class SetAlarmActivity extends AppCompatActivity {
     private void playDefaultVibration() {
         if (vibrator != null && vibrator.hasVibrator()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                VibrationEffect effect = VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE);
-                vibrator.vibrate(effect);
+                vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE));
             } else {
                 vibrator.vibrate(500);
             }
         }
     }
 
-    /**
-     * [기존 주석] 선택된 알람음 파일의 이름을 UI에 표시하는 헬퍼 메소드입니다.
-     * @param uri 음악 파일의 Uri. null일 경우 텍스트를 숨깁니다.
-     */
     private void updateSelectedSoundUI(Uri uri) {
         if (uri != null) {
             String fileName = getFileNameFromUri(uri);
@@ -361,12 +363,6 @@ public class SetAlarmActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * [기존 주석 개선] 파일의 Uri로부터 실제 파일 이름을 가져오는 헬퍼 메소드입니다.
-     * 안드로이드의 ContentResolver를 통해 파일의 메타데이터(예: 표시 이름)를 조회합니다.
-     * @param uri 파일의 Uri
-     * @return 파일 이름 또는 이름을 찾지 못할 경우 null
-     */
     private String getFileNameFromUri(Uri uri) {
         String fileName = null;
         try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
@@ -377,8 +373,6 @@ public class SetAlarmActivity extends AppCompatActivity {
                 }
             }
         }
-        // [기존 주석 개선] ContentResolver로 이름을 못찾는 경우, URI의 마지막 부분을 이름으로 사용하려 시도할 수 있습니다.
-        // 다만 이 방식은 항상 정확한 파일 이름을 보장하지는 않습니다.
         return fileName != null ? fileName : uri.getLastPathSegment();
     }
 }
